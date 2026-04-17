@@ -1,6 +1,7 @@
-import { getModel } from "@yaakapp-internal/models";
+import { httpRequestsAtom } from "@yaakapp-internal/models";
 import type { HttpRequest, HttpResponse, HttpResponseEvent } from "@yaakapp-internal/models";
 import classNames from "classnames";
+import { useAtomValue } from "jotai";
 import type { ComponentType, CSSProperties } from "react";
 import { lazy, Suspense, useMemo } from "react";
 import { useCancelHttpResponse } from "../hooks/useCancelHttpResponse";
@@ -57,6 +58,7 @@ interface Props {
   style?: CSSProperties;
   className?: string;
   activeRequestId: string;
+  activeRequest?: HttpRequest | null;
 }
 
 const TAB_BODY = "body";
@@ -75,8 +77,10 @@ interface RedirectDropWarning {
 
 const DEFAULT_CODE_MODE: GeneratedRequestCodeMode = "curl";
 
-export function HttpResponsePane({ style, className, activeRequestId }: Props) {
-  const activeRequest = getModel("http_request", activeRequestId) as HttpRequest | null;
+export function HttpResponsePane({ style, className, activeRequestId, activeRequest }: Props) {
+  const httpRequests = useAtomValue(httpRequestsAtom);
+  const request =
+    activeRequest ?? httpRequests.find((candidate) => candidate.id === activeRequestId) ?? null;
   const { activeResponse, setPinnedResponseId, responses } = usePinnedHttpResponse(activeRequestId);
   const [viewMode, setViewMode] = useResponseViewMode(activeResponse?.requestId);
   const [timelineViewMode, setTimelineViewMode] = useTimelineViewMode();
@@ -197,19 +201,20 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
       )}
     >
       {activeResponse == null ? (
-        activeRequest == null ? (
+        request == null ? (
           <HotkeyList hotkeys={["request.send", "model.create", "sidebar.focus", "url_bar.focus"]} />
         ) : (
           <div className="h-full w-full grid grid-rows-[auto_minmax(0,1fr)] grid-cols-1">
             <Tabs
               label={t("Code")}
+              defaultValue={TAB_CODE}
               tabs={[{ value: TAB_CODE, label: t("Code") }]}
               tabListClassName="mt-1 -mb-1.5"
               storageKey="response_tabs_no_response"
               activeTabKey={activeRequestId}
             >
               <TabContent value={TAB_CODE}>
-                <GeneratedRequestCode request={activeRequest} />
+                <GeneratedRequestCode request={request} />
               </TabContent>
             </Tabs>
           </div>
@@ -376,7 +381,7 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
                 <HttpResponseTimeline response={activeResponse} viewMode={timelineViewMode} />
               </TabContent>
               <TabContent value={TAB_CODE}>
-                <GeneratedRequestCode request={activeRequest} />
+                <GeneratedRequestCode request={request} />
               </TabContent>
             </Tabs>
           </div>

@@ -35,7 +35,7 @@ export function HttpRequestLayout({ activeRequest, style }: Props) {
         />
       )}
       secondSlot={({ style }) => (
-        <HttpResponsePane activeRequestId={activeRequest.id} style={style} />
+        <HttpResponsePane activeRequestId={activeRequest.id} activeRequest={activeRequest} style={style} />
       )}
     />
   );

@@ -57,6 +57,7 @@ export function GeneratedRequestCode({ request }: Props) {
       headers: requestSnapshot.headers,
       bodyText: omittedReason == null ? requestSnapshot.bodyText : null,
       omittedReason,
+      noFollowRedirects: requestSnapshot.noFollowRedirects,
     });
   }, [activeMode, requestSnapshot]);
 
@@ -111,6 +112,7 @@ function buildRequestSnapshot(request: HttpRequest | null, inheritedHeaders: Htt
       headers: [] as Array<{ name: string; value: string }>,
       bodyText: null as string | null,
       omittedReason: null as string | null,
+      noFollowRedirects: false,
     };
   }
 
@@ -125,6 +127,7 @@ function buildRequestSnapshot(request: HttpRequest | null, inheritedHeaders: Htt
     headers,
     bodyText,
     omittedReason,
+    noFollowRedirects: request.noFollowRedirects ?? false,
   };
 }
 
@@ -305,6 +308,7 @@ function buildGeneratedSnippet({
   headers,
   bodyText,
   omittedReason,
+  noFollowRedirects,
 }: {
   mode: GeneratedRequestCodeMode;
   method: string;
@@ -312,10 +316,11 @@ function buildGeneratedSnippet({
   headers: Array<{ name: string; value: string }>;
   bodyText: string | null;
   omittedReason: string | null;
+  noFollowRedirects: boolean;
 }) {
   if (mode === "e") {
     return {
-      code: buildELanguageCode({ method, url, headers, bodyText, omittedReason }),
+      code: buildELanguageCode({ method, url, headers, bodyText, omittedReason, noFollowRedirects }),
       warning: omittedReason,
     };
   }
@@ -418,12 +423,14 @@ function buildELanguageCode({
   headers,
   bodyText,
   omittedReason,
+  noFollowRedirects,
 }: {
   method: string;
   url: string;
   headers: Array<{ name: string; value: string }>;
   bodyText: string | null;
   omittedReason: string | null;
+  noFollowRedirects: boolean;
 }) {
   const methodUpper = method.toUpperCase();
   const isGet = methodUpper === "GET";
@@ -487,7 +494,7 @@ function buildELanguageCode({
   }
 
   lines.push(
-    `局_结果 = 网页_访问_对象 (局_网址, 局_方式, ${isGet ? "" : "局_提交数据"}, , , ${headers.length > 0 ? "局_提交协议头" : ""}, , , , , , , , , , , )`,
+    `局_结果 = 网页_访问_对象 (局_网址, 局_方式, ${isGet ? "" : "局_提交数据"}, , , ${headers.length > 0 ? "局_提交协议头" : ""}, , , ${noFollowRedirects ? "真" : ""}, , , , , , , , )`,
   );
   lines.push("局_返回 = 到文本(编码_编码转换对象(局_结果))");
   lines.push("返回 (局_返回)");

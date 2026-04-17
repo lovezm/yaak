@@ -1,12 +1,11 @@
-# GitHub 自动检查关闭计划
+# 未发送请求时代码生成显示修复计划
 
-- [x] 检查当前仓库哪些 GitHub Actions 仍会自动触发
-- [x] 关闭不需要的自动检查触发，仅保留手动触发
-- [x] 更新任务记录并验证工作流语法
+- [x] 检查代码标签在未发送请求时的显示与渲染条件
+- [x] 修复未发送请求时代码面板不显示的问题
+- [x] 更新任务记录与 lessons，并跑前端校验
 
 ## Review
 
-- 已确认当前推送后自动跑的是 `.github/workflows/ci.yml` 的 `Lint and Test`
-- 已将 `ci.yml` 从 `push` / `pull_request` 改成仅 `workflow_dispatch`
-- 验证通过：`ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml"); puts "yaml ok"'`
-- 现在这条检查不会再在 `git push` 后自动触发，只能在 GitHub 的 `Actions` 页面手动运行
+- 已确认 `HttpResponsePane` 在未发送时依赖内部 `getModel("http_request", id)` 读取请求；这是一份非订阅式快照，容易导致当前请求存在但仍走到空状态分支
+- 已改为让主编辑页把当前 `activeRequest` 直接传给 `HttpResponsePane`，同时在面板内部订阅 `httpRequestsAtom` 作为兜底，未发送时也能直接显示代码生成
+- 前端校验通过：`npm run --workspace src-web lint`
