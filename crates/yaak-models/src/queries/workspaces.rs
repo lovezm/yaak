@@ -94,7 +94,7 @@ pub fn default_headers() -> Vec<HttpRequestHeader> {
         HttpRequestHeader {
             enabled: true,
             name: "User-Agent".to_string(),
-            value: "yaak".to_string(),
+            value: default_user_agent().to_string(),
             id: None,
         },
         HttpRequestHeader {
@@ -104,4 +104,41 @@ pub fn default_headers() -> Vec<HttpRequestHeader> {
             id: None,
         },
     ]
+}
+
+fn default_user_agent() -> &'static str {
+    #[cfg(target_os = "macos")]
+    {
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.87 Safari/537.36"
+    }
+
+    #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+    {
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_headers;
+
+    #[test]
+    fn default_headers_include_browser_user_agent() {
+        let user_agent = default_headers()
+            .into_iter()
+            .find(|header| header.name.eq_ignore_ascii_case("user-agent"))
+            .expect("default user-agent header should exist");
+
+        assert_ne!(user_agent.value, "yaak");
+        assert!(
+            user_agent.value.starts_with("Mozilla/5.0"),
+            "unexpected user-agent: {}",
+            user_agent.value
+        );
+    }
 }

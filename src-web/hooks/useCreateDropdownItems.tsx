@@ -7,6 +7,7 @@ import type { DropdownItem } from "../components/core/Dropdown";
 import { Icon } from "../components/core/Icon";
 import { createRequestAndNavigate } from "../lib/createRequestAndNavigate";
 import { generateId } from "../lib/generateId";
+import { t } from "../lib/i18n";
 import { BODY_TYPE_GRAPHQL } from "../lib/model_util";
 import { activeRequestAtom } from "./useActiveRequest";
 import { activeWorkspaceIdAtom } from "./useActiveWorkspace";
@@ -55,17 +56,17 @@ export function getCreateDropdownItems({
     return [];
   }
 
-  return [
-    {
-      label: "HTTP",
-      leftSlot: hideIcons ? undefined : <Icon icon="plus" />,
-      onSelect: async () => {
-        const id = await createRequestAndNavigate({ model: "http_request", workspaceId, folderId });
+    return [
+      {
+        label: t("HTTP"),
+        leftSlot: hideIcons ? undefined : <Icon icon="plus" />,
+        onSelect: async () => {
+          const id = await createRequestAndNavigate({ model: "http_request", workspaceId, folderId });
         onCreate?.("http_request", id);
       },
     },
     {
-      label: "GraphQL",
+      label: t("GraphQL"),
       leftSlot: hideIcons ? undefined : <Icon icon="plus" />,
       onSelect: async () => {
         const id = await createRequestAndNavigate({
@@ -80,7 +81,7 @@ export function getCreateDropdownItems({
       },
     },
     {
-      label: "gRPC",
+      label: t("gRPC"),
       leftSlot: hideIcons ? undefined : <Icon icon="plus" />,
       onSelect: async () => {
         const id = await createRequestAndNavigate({ model: "grpc_request", workspaceId, folderId });
@@ -88,7 +89,7 @@ export function getCreateDropdownItems({
       },
     },
     {
-      label: "WebSocket",
+      label: t("WebSocket"),
       leftSlot: hideIcons ? undefined : <Icon icon="plus" />,
       onSelect: async () => {
         const id = await createRequestAndNavigate({
@@ -104,7 +105,7 @@ export function getCreateDropdownItems({
       : [
           { type: "separator" },
           {
-            label: "Folder",
+            label: t("Folder"),
             leftSlot: hideIcons ? undefined : <Icon icon="plus" />,
             onSelect: async () => {
               const id = await createFolder.mutateAsync({ folderId });

@@ -9,6 +9,7 @@ import { useFolderActions } from "../hooks/useFolderActions";
 import { useLatestHttpResponse } from "../hooks/useLatestHttpResponse";
 import { sendAnyHttpRequest } from "../hooks/useSendAnyHttpRequest";
 import { fireAndForget } from "../lib/fireAndForget";
+import { t } from "../lib/i18n";
 import { showDialog } from "../lib/dialog";
 import { resolvedModelName } from "../lib/resolvedModelName";
 import { router } from "../lib/router";
@@ -63,7 +64,7 @@ export function FolderLayout({ folder, style }: Props) {
             onClick={handleSendAll}
             disabled={sendAllAction == null}
           >
-            Send All
+            {t("Send All")}
           </Button>
         </HStack>
       </HStack>

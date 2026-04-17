@@ -1,4 +1,5 @@
-import type { HttpResponse, HttpResponseEvent } from "@yaakapp-internal/models";
+import { getModel } from "@yaakapp-internal/models";
+import type { HttpRequest, HttpResponse, HttpResponseEvent } from "@yaakapp-internal/models";
 import classNames from "classnames";
 import type { ComponentType, CSSProperties } from "react";
 import { lazy, Suspense, useMemo } from "react";
@@ -75,6 +76,7 @@ interface RedirectDropWarning {
 const DEFAULT_CODE_MODE: GeneratedRequestCodeMode = "curl";
 
 export function HttpResponsePane({ style, className, activeRequestId }: Props) {
+  const activeRequest = getModel("http_request", activeRequestId) as HttpRequest | null;
   const { activeResponse, setPinnedResponseId, responses } = usePinnedHttpResponse(activeRequestId);
   const [viewMode, setViewMode] = useResponseViewMode(activeResponse?.requestId);
   const [timelineViewMode, setTimelineViewMode] = useTimelineViewMode();
@@ -195,7 +197,23 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
       )}
     >
       {activeResponse == null ? (
-        <HotkeyList hotkeys={["request.send", "model.create", "sidebar.focus", "url_bar.focus"]} />
+        activeRequest == null ? (
+          <HotkeyList hotkeys={["request.send", "model.create", "sidebar.focus", "url_bar.focus"]} />
+        ) : (
+          <div className="h-full w-full grid grid-rows-[auto_minmax(0,1fr)] grid-cols-1">
+            <Tabs
+              label={t("Code")}
+              tabs={[{ value: TAB_CODE, label: t("Code") }]}
+              tabListClassName="mt-1 -mb-1.5"
+              storageKey="response_tabs_no_response"
+              activeTabKey={activeRequestId}
+            >
+              <TabContent value={TAB_CODE}>
+                <GeneratedRequestCode request={activeRequest} />
+              </TabContent>
+            </Tabs>
+          </div>
+        )
       ) : (
         <div className="h-full w-full grid grid-rows-[auto_minmax(0,1fr)] grid-cols-1">
           <HStack
@@ -358,7 +376,7 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
                 <HttpResponseTimeline response={activeResponse} viewMode={timelineViewMode} />
               </TabContent>
               <TabContent value={TAB_CODE}>
-                <GeneratedRequestCode response={activeResponse} events={responseEvents.data} />
+                <GeneratedRequestCode request={activeRequest} />
               </TabContent>
             </Tabs>
           </div>

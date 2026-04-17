@@ -1,30 +1,33 @@
-import { getModel } from "@yaakapp-internal/models";
-import type { HttpRequest, HttpResponse, HttpResponseEvent } from "@yaakapp-internal/models";
+import type { HttpRequest, HttpRequestHeader } from "@yaakapp-internal/models";
 import { useMemo } from "react";
-import { useHttpRequestBody } from "../hooks/useHttpRequestBody";
+import { useInheritedHeaders } from "../hooks/useInheritedHeaders";
 import { useKeyValue } from "../hooks/useKeyValue";
 import { getMimeTypeFromContentType, isProbablyTextContentType } from "../lib/contentType";
 import { t } from "../lib/i18n";
+import {
+  BODY_TYPE_BINARY,
+  BODY_TYPE_FORM_MULTIPART,
+  BODY_TYPE_FORM_URLENCODED,
+  BODY_TYPE_GRAPHQL,
+  getContentTypeFromHeaders,
+} from "../lib/model_util";
 import { Banner } from "./core/Banner";
 import { Editor } from "./core/Editor/LazyEditor";
-import { LoadingIcon } from "./core/LoadingIcon";
 import { SegmentedControl } from "./core/SegmentedControl";
 import { HStack, VStack } from "./core/Stacks";
-import { EmptyStateText } from "./EmptyStateText";
 import { CopyIconButton } from "./CopyIconButton";
 
 export type GeneratedRequestCodeMode = "curl" | "python" | "e";
 
 interface Props {
-  response: HttpResponse;
-  events: HttpResponseEvent[] | undefined;
+  request: HttpRequest | null;
 }
 
 const DEFAULT_MODE: GeneratedRequestCodeMode = "curl";
 const MAX_INLINE_BODY_BYTES = 64 * 1024;
 
-export function GeneratedRequestCode({ response, events }: Props) {
-  const { data: requestBody, isLoading, error } = useHttpRequestBody(response);
+export function GeneratedRequestCode({ request }: Props) {
+  const inheritedHeaders = useInheritedHeaders(request);
   const { value: mode, set: setMode } = useKeyValue<GeneratedRequestCodeMode>({
     namespace: "no_sync",
     key: "response_generated_code_mode",
@@ -32,47 +35,36 @@ export function GeneratedRequestCode({ response, events }: Props) {
   });
 
   const activeMode = mode ?? DEFAULT_MODE;
-  const request = getModel("http_request", response.requestId) as HttpRequest | null;
 
-  const requestInfo = useMemo(() => {
-    return getRequestInfo(response, request, events);
-  }, [events, request, response]);
+  const requestSnapshot = useMemo(() => {
+    return buildRequestSnapshot(request, inheritedHeaders);
+  }, [inheritedHeaders, request]);
 
   const generated = useMemo(() => {
-    const contentType =
-      response.requestHeaders.find((h) => h.name.toLowerCase() === "content-type")?.value ?? null;
-    const omittedReason = getBodyOmittedReason({
-      contentType,
-      contentLength: response.requestContentLength ?? 0,
-      bodyText: requestBody?.bodyText ?? null,
-    });
+    const contentType = getContentTypeFromHeaders(requestSnapshot.headers);
+    const omittedReason =
+      requestSnapshot.omittedReason ??
+      getBodyOmittedReason({
+        contentType,
+        contentLength: new TextEncoder().encode(requestSnapshot.bodyText ?? "").length,
+        bodyText: requestSnapshot.bodyText,
+      });
 
     return buildGeneratedSnippet({
       mode: activeMode,
-      method: requestInfo.method,
-      url: requestInfo.url,
-      headers: response.requestHeaders,
-      bodyText: omittedReason == null ? requestBody?.bodyText ?? null : null,
+      method: requestSnapshot.method,
+      url: requestSnapshot.url,
+      headers: requestSnapshot.headers,
+      bodyText: omittedReason == null ? requestSnapshot.bodyText : null,
       omittedReason,
     });
-  }, [activeMode, requestBody?.bodyText, requestInfo.method, requestInfo.url, response]);
-
-  if (isLoading && (response.requestContentLength ?? 0) > 0) {
-    return (
-      <EmptyStateText>
-        <HStack space={2}>
-          <LoadingIcon className="text-text-subtlest" />
-          {t("Generating code...")}
-        </HStack>
-      </EmptyStateText>
-    );
-  }
+  }, [activeMode, requestSnapshot]);
 
   return (
     <VStack className="h-full min-h-0" space={2}>
       <HStack justifyContent="between" space={2} wrap>
         <SegmentedControl
-          name={`generated-request-code.${response.id}`}
+          name={`generated-request-code.${request?.id ?? "none"}`}
           label={t("Generated Code")}
           hideLabel
           value={activeMode}
@@ -95,12 +87,6 @@ export function GeneratedRequestCode({ response, events }: Props) {
       </HStack>
 
       {generated.warning != null && <Banner color="warning">{generated.warning}</Banner>}
-      {error != null && (
-        <Banner color="danger">
-          {t("Failed to load request body for code generation")}
-          {`: ${error.message}`}
-        </Banner>
-      )}
 
       <div className="min-h-0 flex-1">
         <Editor
@@ -110,43 +96,173 @@ export function GeneratedRequestCode({ response, events }: Props) {
           defaultValue={generated.code}
           forceUpdateKey={generated.code}
           language={activeMode === "curl" ? "shell" : activeMode === "python" ? "python" : "text"}
-          stateKey={`generated_request_code.${response.id}.${activeMode}`}
+          stateKey={`generated_request_code.${request?.id ?? "none"}.${activeMode}`}
         />
       </div>
     </VStack>
   );
 }
 
-function getRequestInfo(
-  response: HttpResponse,
-  request: HttpRequest | null,
-  events: HttpResponseEvent[] | undefined,
-) {
-  const sendUrlEvent = [...(events ?? [])]
-    .reverse()
-    .find((event) => event.event.type === "send_url")?.event;
-
-  if (sendUrlEvent?.type === "send_url") {
+function buildRequestSnapshot(request: HttpRequest | null, inheritedHeaders: HttpRequestHeader[]) {
+  if (request == null) {
     return {
-      method: sendUrlEvent.method,
-      url: buildUrlFromSendEvent(sendUrlEvent),
+      method: "GET",
+      url: "",
+      headers: [] as Array<{ name: string; value: string }>,
+      bodyText: null as string | null,
+      omittedReason: null as string | null,
     };
   }
 
+  const headers = resolveHeaders(request, inheritedHeaders);
+  const method = request.method ?? "GET";
+  const { bodyText, omittedReason } = buildRequestBodyText(request, headers, method);
+  const url = buildRequestUrl(request, method);
+
   return {
-    method: request?.method ?? "GET",
-    url: request?.url ?? response.url,
+    method,
+    url,
+    headers,
+    bodyText,
+    omittedReason,
   };
 }
 
-function buildUrlFromSendEvent(event: Extract<HttpResponseEvent["event"], { type: "send_url" }>) {
-  const auth = event.username || event.password ? `${event.username}:${event.password}@` : "";
-  const isDefaultPort =
-    (event.scheme === "http" && event.port === 80) || (event.scheme === "https" && event.port === 443);
-  const port = isDefaultPort ? "" : `:${event.port}`;
-  const query = event.query ? `?${event.query}` : "";
-  const fragment = event.fragment ? `#${event.fragment}` : "";
-  return `${event.scheme}://${auth}${event.host}${port}${event.path}${query}${fragment}`;
+function resolveHeaders(request: HttpRequest, inheritedHeaders: HttpRequestHeader[]) {
+  const headersByName = new Map<string, HttpRequestHeader>();
+
+  for (const header of [...inheritedHeaders, ...request.headers]) {
+    headersByName.set(header.name.toLowerCase(), header);
+  }
+
+  return Array.from(headersByName.values())
+    .filter((header) => header.enabled !== false && header.name.trim() !== "")
+    .map((header) => ({ name: header.name, value: header.value ?? "" }));
+}
+
+function buildRequestUrl(request: HttpRequest, method: string) {
+  if (request.bodyType !== BODY_TYPE_GRAPHQL || method.toUpperCase() !== "GET") {
+    return request.url;
+  }
+
+  const { query, variables } = getGraphqlParts(request);
+  try {
+    const url = new URL(request.url, "http://yaak.local");
+
+    url.searchParams.delete("query");
+    url.searchParams.delete("variables");
+
+    if (query.trim() !== "") {
+      url.searchParams.set("query", query);
+    }
+
+    if (variables.trim() !== "") {
+      url.searchParams.set("variables", variables);
+    }
+
+    return request.url.startsWith("http://") || request.url.startsWith("https://")
+      ? `${url.origin}${url.pathname}${url.search}${url.hash}`
+      : `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return request.url;
+  }
+}
+
+function buildRequestBodyText(
+  request: HttpRequest,
+  headers: Array<{ name: string; value: string }>,
+  method: string,
+) {
+  const methodUpper = method.toUpperCase();
+
+  if (request.bodyType === BODY_TYPE_BINARY || request.bodyType === BODY_TYPE_FORM_MULTIPART) {
+    return {
+      bodyText: null,
+      omittedReason:
+        request.bodyType === BODY_TYPE_FORM_MULTIPART
+          ? t("Request body omitted because multipart data is not safe to inline.")
+          : t("Request body omitted because it appears to be binary."),
+    };
+  }
+
+  if (request.bodyType === BODY_TYPE_FORM_URLENCODED) {
+    return { bodyText: buildFormUrlencodedBody(request), omittedReason: null };
+  }
+
+  if (request.bodyType === BODY_TYPE_GRAPHQL) {
+    const { query, variables } = getGraphqlParts(request);
+    if (methodUpper === "GET") {
+      return { bodyText: null, omittedReason: null };
+    }
+
+    return { bodyText: buildGraphqlBodyText(query, variables), omittedReason: null };
+  }
+
+  const contentType = getContentTypeFromHeaders(headers);
+  const text = "text" in request.body ? request.body.text ?? "" : "";
+  if (text === "") {
+    return { bodyText: null, omittedReason: null };
+  }
+
+  if (contentType === "application/json" && request.body?.sendJsonComments !== true) {
+    return { bodyText: text, omittedReason: null };
+  }
+
+  return { bodyText: text, omittedReason: null };
+}
+
+function buildFormUrlencodedBody(request: HttpRequest) {
+  const formItems = Array.isArray(request.body?.form) ? request.body.form : [];
+  const params = new URLSearchParams();
+  for (const item of formItems) {
+    if (item.enabled === false) continue;
+    const name = item.name ?? "";
+    if (name.trim() === "") continue;
+    params.append(name, item.value ?? "");
+  }
+
+  const encoded = params.toString();
+  return encoded === "" ? null : encoded;
+}
+
+function getGraphqlParts(request: HttpRequest) {
+  if ("query" in request.body) {
+    return {
+      query: request.body.query ?? "",
+      variables: request.body.variables ?? "",
+    };
+  }
+
+  if ("text" in request.body) {
+    try {
+      const parsed = JSON.parse(request.body.text ?? "{}");
+      return {
+        query: typeof parsed.query === "string" ? parsed.query : "",
+        variables:
+          parsed.variables == null
+            ? ""
+            : typeof parsed.variables === "string"
+              ? parsed.variables
+              : JSON.stringify(parsed.variables),
+      };
+    } catch {
+      return { query: "", variables: "" };
+    }
+  }
+
+  return { query: "", variables: "" };
+}
+
+function buildGraphqlBodyText(query: string, variables: string) {
+  if (variables.trim() === "") {
+    return JSON.stringify({ query });
+  }
+
+  try {
+    return JSON.stringify({ query, variables: JSON.parse(variables) });
+  } catch {
+    return `{"query":${JSON.stringify(query)},"variables":${variables}}`;
+  }
 }
 
 function getBodyOmittedReason({

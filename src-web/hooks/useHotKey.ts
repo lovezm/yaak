@@ -4,6 +4,7 @@ import { settingsAtom } from "@yaakapp-internal/models";
 import { atom, useAtomValue } from "jotai";
 import { useEffect } from "react";
 import { capitalize } from "../lib/capitalize";
+import { t } from "../lib/i18n";
 import { jotaiStore } from "../lib/jotai";
 
 const HOLD_KEYS = ["Shift", "Control", "Command", "Alt", "Meta"];
@@ -305,7 +306,7 @@ function handleKeyDown(e: KeyboardEvent) {
 }
 
 export function useHotkeyLabel(action: HotkeyAction): string {
-  return hotkeyLabels[action];
+  return t(hotkeyLabels[action]);
 }
 
 export function getHotkeyScope(action: HotkeyAction): string {

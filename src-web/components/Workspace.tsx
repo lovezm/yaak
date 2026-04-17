@@ -29,6 +29,7 @@ import { useSidebarWidth } from "../hooks/useSidebarWidth";
 import { useSyncWorkspaceRequestTitle } from "../hooks/useSyncWorkspaceRequestTitle";
 import { duplicateRequestOrFolderAndNavigate } from "../lib/duplicateRequestOrFolderAndNavigate";
 import { importData } from "../lib/importData";
+import { t } from "../lib/i18n";
 import { jotaiStore } from "../lib/jotai";
 import { CreateDropdown } from "./CreateDropdown";
 import { Banner } from "./core/Banner";
@@ -239,11 +240,11 @@ function WorkspaceBody() {
       bottomSlot={
         <HStack space={1} justifyContent="center" className="mt-3">
           <Button variant="border" size="sm" onClick={() => importData.mutate()}>
-            Import
+            {t("Import")}
           </Button>
           <CreateDropdown hideFolder>
             <Button variant="border" forDropdown size="sm">
-              New Request
+              {t("New Request")}
             </Button>
           </CreateDropdown>
         </HStack>

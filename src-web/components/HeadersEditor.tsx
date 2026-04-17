@@ -198,7 +198,9 @@ function PasteHeadersDialog({
           heightMode="full"
           language="pairs"
           onChange={setText}
-          placeholder={"Content-Type: application/json\nUser-Agent: Yaak"}
+          placeholder={
+            "Content-Type: application/json\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+          }
           stateKey={`paste_headers.${stateKey}`}
         />
       </div>

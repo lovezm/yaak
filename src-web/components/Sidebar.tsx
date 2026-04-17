@@ -346,13 +346,13 @@ function Sidebar({ className }: { className?: string }) {
 
       const initialItems: ContextMenuProps["items"] = [
         {
-          label: "Folder Settings",
+          label: t("Folder Settings"),
           hidden: !(items.length === 1 && child.model === "folder"),
           leftSlot: <Icon icon="folder_cog" />,
           onSelect: () => openFolderSettings(child.id),
         },
         {
-          label: "Send",
+          label: t("Send"),
           hotKeyAction: "request.send",
           hotKeyLabelOnly: true,
           hidden: !onlyHttpRequests,
@@ -363,7 +363,7 @@ function Sidebar({ className }: { className?: string }) {
           ? await getHttpRequestActions()
           : []
         ).map((a) => ({
-          label: a.label,
+          label: t(a.label),
           leftSlot: <Icon icon={a.icon ?? "empty"} />,
           onSelect: async () => {
             const request = getModel("http_request", child.id);
@@ -374,7 +374,7 @@ function Sidebar({ className }: { className?: string }) {
           ? await getGrpcRequestActions()
           : []
         ).map((a) => ({
-          label: a.label,
+          label: t(a.label),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           leftSlot: <Icon icon={a.icon ?? "empty"} />,
           onSelect: async () => {
@@ -386,7 +386,7 @@ function Sidebar({ className }: { className?: string }) {
           ? await getWebsocketRequestActions()
           : []
         ).map((a) => ({
-          label: a.label,
+          label: t(a.label),
           leftSlot: <Icon icon={a.icon ?? "empty"} />,
           onSelect: async () => {
             const request = getModel("websocket_request", child.id);
@@ -395,7 +395,7 @@ function Sidebar({ className }: { className?: string }) {
         })),
         ...(items.length === 1 && child.model === "folder" ? await getFolderActions() : []).map(
           (a) => ({
-            label: a.label,
+            label: t(a.label),
             leftSlot: <Icon icon={a.icon ?? "empty"} />,
             onSelect: async () => {
               const model = getModel("folder", child.id);
@@ -422,7 +422,7 @@ function Sidebar({ className }: { className?: string }) {
           hidden: initialItems.filter((v) => !v.hidden).length === 0,
         },
         {
-          label: "Rename",
+          label: t("Rename"),
           leftSlot: <Icon icon="pencil" />,
           hidden: items.length > 1,
           hotKeyAction: "sidebar.selected.rename",
@@ -432,7 +432,7 @@ function Sidebar({ className }: { className?: string }) {
           },
         },
         {
-          label: "Duplicate",
+          label: t("Duplicate"),
           hotKeyAction: "model.duplicate",
           hotKeyLabelOnly: true, // Would trigger for every request (bad)
           leftSlot: <Icon icon="copy" />,
@@ -453,7 +453,7 @@ function Sidebar({ className }: { className?: string }) {
         },
         {
           color: "danger",
-          label: "Delete",
+          label: t("Delete"),
           hotKeyAction: "sidebar.selected.delete",
           hotKeyLabelOnly: true,
           leftSlot: <Icon icon="trash" />,
