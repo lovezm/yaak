@@ -15,19 +15,12 @@ export function BulkPairEditor({
   stateKey,
 }: Props) {
   const pairsText = useMemo(() => {
-    return pairs
-      .filter((p) => !(p.name.trim() === "" && p.value.trim() === ""))
-      .map(pairToLine)
-      .join("\n");
+    return pairsToText(pairs);
   }, [pairs]);
 
   const handleChange = useCallback(
     (text: string) => {
-      const pairs = text
-        .split("\n")
-        .filter((l: string) => l.trim())
-        .map(lineToPair);
-      onChange(pairs);
+      onChange(textToPairs(text));
     },
     [onChange],
   );
@@ -47,13 +40,27 @@ export function BulkPairEditor({
   );
 }
 
+export function pairsToText(pairs: Pair[]) {
+  return pairs
+    .filter((p) => !(p.name.trim() === "" && p.value.trim() === ""))
+    .map(pairToLine)
+    .join("\n");
+}
+
+export function textToPairs(text: string): PairWithId[] {
+  return text
+    .split("\n")
+    .filter((line) => line.trim())
+    .map(lineToPair);
+}
+
 function pairToLine(pair: Pair) {
   const value = pair.value.replaceAll("\n", "\\n");
   return `${pair.name}: ${value}`;
 }
 
 function lineToPair(line: string): PairWithId {
-  const [, name, value] = line.match(/^(:?[^:]+):\s+(.*)$/) ?? [];
+  const [, name, value] = line.match(/^([^:]+):(.*)$/) ?? [];
   return {
     enabled: true,
     name: (name ?? "").trim(),

@@ -44,6 +44,7 @@ import { getWebsocketRequestActions } from "../hooks/useWebsocketRequestActions"
 import { deepEqualAtom } from "../lib/atoms";
 import { deleteModelWithConfirm } from "../lib/deleteModelWithConfirm";
 import { fireAndForget } from "../lib/fireAndForget";
+import { t } from "../lib/i18n";
 import { jotaiStore } from "../lib/jotai";
 import { resolvedModelName } from "../lib/resolvedModelName";
 import { isSidebarFocused } from "../lib/scopes";
@@ -504,7 +505,7 @@ function Sidebar({ className }: { className?: string }) {
               size="sm"
               label="filter"
               language={null} // Explicitly disable
-              placeholder="Search"
+              placeholder={t("Search")}
               onChange={handleFilterChange}
               defaultValue={filterText.text}
               forceUpdateKey={filterText.key}
@@ -517,7 +518,7 @@ function Sidebar({ className }: { className?: string }) {
                   <IconButton
                     className="!bg-transparent !h-auto min-h-full opacity-50 hover:opacity-100 -mr-1"
                     icon="x"
-                    title="Clear filter"
+                    title={t("Clear filter")}
                     onClick={clearFilterText}
                   />
                 )

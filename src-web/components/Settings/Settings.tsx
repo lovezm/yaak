@@ -7,7 +7,7 @@ import classNames from "classnames";
 import { useAtomValue } from "jotai";
 import { useKeyPressEvent } from "react-use";
 import { appInfo } from "../../lib/appInfo";
-import { capitalize } from "../../lib/capitalize";
+import { t } from "../../lib/i18n";
 import { CountBadge } from "../core/CountBadge";
 import { Icon } from "../core/Icon";
 import { HStack } from "../core/Stacks";
@@ -46,6 +46,17 @@ const tabs = [
 ] as const;
 export type SettingsTab = (typeof tabs)[number];
 
+const tabLabels: Record<SettingsTab, string> = {
+  general: t("General"),
+  theme: t("Theme"),
+  interface: t("Interface"),
+  shortcuts: t("Shortcuts"),
+  plugins: t("Plugins"),
+  certificates: t("Certificates"),
+  proxy: t("Proxy"),
+  license: t("License"),
+};
+
 export default function Settings({ hide }: Props) {
   const { tab: tabFromQuery } = useSearch({ from: "/workspaces/$workspaceId/settings" });
   // Parse tab and subtab (e.g., "plugins:installed")
@@ -83,7 +94,9 @@ export default function Settings({ hide }: Props) {
             justifyContent="center"
             className="w-full h-full grid grid-cols-[1fr_auto] pointer-events-none"
           >
-            <div className={classNames(type() === "macos" ? "text-center" : "pl-2")}>Settings</div>
+            <div className={classNames(type() === "macos" ? "text-center" : "pl-2")}>
+              {t("Settings")}
+            </div>
           </HStack>
         </HeaderSize>
       )}
@@ -92,11 +105,11 @@ export default function Settings({ hide }: Props) {
         defaultValue={mainTab || tabFromQuery}
         addBorders
         tabListClassName="min-w-[10rem] bg-surface x-theme-sidebar border-r border-border pl-3"
-        label="Settings"
+        label={t("Settings")}
         tabs={tabs.map(
           (value): TabItem => ({
             value,
-            label: capitalize(value),
+            label: tabLabels[value],
             hidden: !appInfo.featureLicense && value === TAB_LICENSE,
             leftSlot:
               value === TAB_GENERAL ? (

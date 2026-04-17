@@ -9,6 +9,7 @@ import { useState } from "react";
 import { activeWorkspaceAtom } from "../../hooks/useActiveWorkspace";
 import { clamp } from "../../lib/clamp";
 import { showConfirm } from "../../lib/confirm";
+import { t } from "../../lib/i18n";
 import { invokeCmd } from "../../lib/tauri";
 import { CargoFeature } from "../CargoFeature";
 import { Button } from "../core/Button";
@@ -26,7 +27,7 @@ const fontSizeOptions = [
 ].map((n) => ({ label: `${n}`, value: `${n}` }));
 
 const keymaps: { value: EditorKeymap; label: string }[] = [
-  { value: "default", label: "Default" },
+  { value: "default", label: t("Default") },
   { value: "vim", label: "Vim" },
   { value: "vscode", label: "VSCode" },
   { value: "emacs", label: "Emacs" },
@@ -44,14 +45,18 @@ export function SettingsInterface() {
   return (
     <VStack space={3} className="mb-4">
       <div className="mb-3">
-        <Heading>Interface</Heading>
-        <p className="text-text-subtle">Tweak settings related to the user interface.</p>
+        <Heading>{t("Interface")}</Heading>
+        <p className="text-text-subtle">
+          {t("Tweak settings related to the user interface.")}
+        </p>
       </div>
       <Select
         name="switchWorkspaceBehavior"
-        label="Open workspace behavior"
+        label={t("Open workspace behavior")}
         size="sm"
-        help="When opening a workspace, should it open in the current window or a new window?"
+        help={t(
+          "When opening a workspace, should it open in the current window or a new window?",
+        )}
         value={
           settings.openWorkspaceNewWindow === true
             ? "new"
@@ -65,9 +70,9 @@ export function SettingsInterface() {
           else await patchModel(settings, { openWorkspaceNewWindow: null });
         }}
         options={[
-          { label: "Always ask", value: "ask" },
-          { label: "Open in current window", value: "current" },
-          { label: "Open in new window", value: "new" },
+          { label: t("Always ask"), value: "ask" },
+          { label: t("Open in current window"), value: "current" },
+          { label: t("Open in new window"), value: "new" },
         ]}
       />
       <HStack space={2} alignItems="end">
@@ -75,10 +80,10 @@ export function SettingsInterface() {
           <Select
             size="sm"
             name="uiFont"
-            label="Interface font"
+            label={t("Interface font")}
             value={settings.interfaceFont ?? NULL_FONT_VALUE}
             options={[
-              { label: "System default", value: NULL_FONT_VALUE },
+              { label: t("System default"), value: NULL_FONT_VALUE },
               ...(fonts.data.uiFonts.map((f) => ({
                 label: f,
                 value: f,
@@ -99,7 +104,7 @@ export function SettingsInterface() {
           hideLabel
           size="sm"
           name="interfaceFontSize"
-          label="Interface Font Size"
+          label={t("Interface Font Size")}
           defaultValue="14"
           value={`${settings.interfaceFontSize}`}
           options={fontSizeOptions}
@@ -111,10 +116,10 @@ export function SettingsInterface() {
           <Select
             size="sm"
             name="editorFont"
-            label="Editor font"
+            label={t("Editor font")}
             value={settings.editorFont ?? NULL_FONT_VALUE}
             options={[
-              { label: "System default", value: NULL_FONT_VALUE },
+              { label: t("System default"), value: NULL_FONT_VALUE },
               ...(fonts.data.editorFonts.map((f) => ({
                 label: f,
                 value: f,
@@ -130,7 +135,7 @@ export function SettingsInterface() {
           hideLabel
           size="sm"
           name="editorFontSize"
-          label="Editor Font Size"
+          label={t("Editor Font Size")}
           defaultValue="12"
           value={`${settings.editorFontSize}`}
           options={fontSizeOptions}
@@ -143,19 +148,19 @@ export function SettingsInterface() {
         leftSlot={<Icon icon="keyboard" color="secondary" />}
         size="sm"
         name="editorKeymap"
-        label="Editor keymap"
+        label={t("Editor keymap")}
         value={`${settings.editorKeymap}`}
         options={keymaps}
         onChange={(v) => patchModel(settings, { editorKeymap: v })}
       />
       <Checkbox
         checked={settings.editorSoftWrap}
-        title="Wrap editor lines"
+        title={t("Wrap editor lines")}
         onChange={(editorSoftWrap) => patchModel(settings, { editorSoftWrap })}
       />
       <Checkbox
         checked={settings.coloredMethods}
-        title="Colorize request methods"
+        title={t("Colorize request methods")}
         onChange={(coloredMethods) => patchModel(settings, { coloredMethods })}
       />
       <CargoFeature feature="license">
@@ -167,8 +172,8 @@ export function SettingsInterface() {
       {type() !== "macos" && (
         <Checkbox
           checked={settings.hideWindowControls}
-          title="Hide window controls"
-          help="Hide the close/maximize/minimize controls on Windows or Linux"
+          title={t("Hide window controls")}
+          help={t("Hide the close/maximize/minimize controls on Windows or Linux")}
           onChange={(hideWindowControls) => patchModel(settings, { hideWindowControls })}
         />
       )}
@@ -182,8 +187,8 @@ function NativeTitlebarSetting({ settings }: { settings: Settings }) {
     <div className="flex gap-1 overflow-hidden h-2xs">
       <Checkbox
         checked={nativeTitlebar}
-        title="Native title bar"
-        help="Use the operating system's standard title bar and window controls"
+        title={t("Native title bar")}
+        help={t("Use the operating system's standard title bar and window controls")}
         onChange={setNativeTitlebar}
       />
       {settings.useNativeTitlebar !== nativeTitlebar && (
@@ -195,7 +200,7 @@ function NativeTitlebarSetting({ settings }: { settings: Settings }) {
             await invokeCmd("cmd_restart");
           }}
         >
-          Apply and Restart
+          {t("Apply and Restart")}
         </Button>
       )}
     </div>
@@ -211,13 +216,13 @@ function LicenseSettings({ settings }: { settings: Settings }) {
   return (
     <Checkbox
       checked={settings.hideLicenseBadge}
-      title="Hide personal use badge"
+      title={t("Hide personal use badge")}
       onChange={async (hideLicenseBadge) => {
         if (hideLicenseBadge) {
           const confirmed = await showConfirm({
             id: "hide-license-badge",
-            title: "Confirm Personal Use",
-            confirmText: "Confirm",
+            title: t("Confirm Personal Use"),
+            confirmText: t("Confirm"),
             description: (
               <VStack space={3}>
                 <p>Hey there 👋🏼</p>

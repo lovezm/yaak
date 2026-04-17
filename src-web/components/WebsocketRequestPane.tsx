@@ -5,7 +5,7 @@ import { closeWebsocket, connectWebsocket, sendWebsocket } from "@yaakapp-intern
 import classNames from "classnames";
 import { atom, useAtomValue } from "jotai";
 import type { CSSProperties } from "react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getActiveCookieJar } from "../hooks/useActiveCookieJar";
 import { getActiveEnvironment } from "../hooks/useActiveEnvironment";
 import { activeRequestIdAtom } from "../hooks/useActiveRequestId";
@@ -19,8 +19,10 @@ import { activeWebsocketConnectionAtom } from "../hooks/usePinnedWebsocketConnec
 import { useRequestEditor, useRequestEditorEvent } from "../hooks/useRequestEditor";
 import { useRequestUpdateKey } from "../hooks/useRequestUpdateKey";
 import { deepEqualAtom } from "../lib/atoms";
+import { buildUrlFromParameters } from "../lib/buildUrlFromParameters";
 import { languageFromContentType } from "../lib/contentType";
 import { generateId } from "../lib/generateId";
+import { t } from "../lib/i18n";
 import { prepareImportQuerystring } from "../lib/prepareImportQuerystring";
 import { resolvedModelName } from "../lib/resolvedModelName";
 import { CountBadge } from "./core/CountBadge";
@@ -64,6 +66,7 @@ const memoNotActiveRequestUrlsAtom = deepEqualAtom(nonActiveRequestUrlsAtom);
 export function WebsocketRequestPane({ style, fullHeight, className, activeRequest }: Props) {
   const activeRequestId = activeRequest.id;
   const tabsRef = useRef<TabsRef>(null);
+  const [localUrl, setLocalUrl] = useState(activeRequest.url);
   const forceUpdateKey = useRequestUpdateKey(activeRequest.id);
   const [{ urlKey }, { forceUrlRefresh, forceParamsRefresh }] = useRequestEditor();
   const authTab = useAuthTab(TAB_AUTH, activeRequest);
@@ -78,6 +81,10 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
     },
     [],
   );
+
+  useEffect(() => {
+    setLocalUrl(activeRequest.url);
+  }, [activeRequest.url]);
 
   const { urlParameterPairs, urlParametersKey } = useMemo(() => {
     const placeholderNames = Array.from(activeRequest.url.matchAll(/\/(:[^/]+)/g)).map(
@@ -100,18 +107,18 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
     return [
       {
         value: TAB_MESSAGE,
-        label: "Message",
+        label: t("Message"),
       } as TabItem,
       {
         value: TAB_PARAMS,
         rightSlot: <CountBadge count={urlParameterPairs.length} />,
-        label: "Params",
+        label: t("Params"),
       },
       ...headersTab,
       ...authTab,
       {
         value: TAB_DESCRIPTION,
-        label: "Info",
+        label: t("Info"),
       },
     ];
   }, [authTab, headersTab, urlParameterPairs.length]);
@@ -158,7 +165,10 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
   }, [connection]);
 
   const handleUrlChange = useCallback(
-    (url: string) => patchModel(activeRequest, { url }),
+    (url: string) => {
+      setLocalUrl(url);
+      return patchModel(activeRequest, { url });
+    },
     [activeRequest],
   );
 
@@ -168,6 +178,7 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
       if (patch != null) {
         e.preventDefault(); // Prevent input onChange
 
+        setLocalUrl(patch.url);
         await patchModel(activeRequest, patch);
         await setActiveTab({
           storageKey: TABS_STORAGE_KEY,
@@ -186,6 +197,16 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
     [activeRequest, activeRequestId, forceParamsRefresh, forceUrlRefresh],
   );
 
+  const handleUrlParametersChange = useCallback(
+    async (urlParameters: WebsocketRequest["urlParameters"]) => {
+      const url = buildUrlFromParameters(localUrl, urlParameters);
+      setLocalUrl(url);
+      forceUrlRefresh();
+      await patchModel(activeRequest, { url, urlParameters });
+    },
+    [activeRequest, forceUrlRefresh, localUrl],
+  );
+
   const messageLanguage = languageFromContentType(null, activeRequest.message);
 
   const isLoading = connection !== null && connection.state !== "closed";
@@ -201,13 +222,13 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
             <UrlBar
               stateKey={`url.${activeRequest.id}`}
               key={forceUpdateKey + urlKey}
-              url={activeRequest.url}
+              url={localUrl}
               submitIcon={isLoading ? "send_horizontal" : "arrow_up_down"}
               rightSlot={
                 isLoading && (
                   <IconButton
                     size="xs"
-                    title="Close connection"
+                    title={t("Close connection")}
                     icon="x"
                     iconColor="secondary"
                     className="w-8 mr-0.5 !h-full"
@@ -227,7 +248,7 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
           </div>
           <Tabs
             ref={tabsRef}
-            label="Request"
+            label={t("Request")}
             tabs={tabs}
             tabListClassName="mt-1 !mb-1.5"
             storageKey={TABS_STORAGE_KEY}
@@ -250,7 +271,7 @@ export function WebsocketRequestPane({ style, fullHeight, className, activeReque
                 stateKey={`params.${activeRequest.id}`}
                 forceUpdateKey={forceUpdateKey + urlParametersKey}
                 pairs={urlParameterPairs}
-                onChange={(urlParameters) => patchModel(activeRequest, { urlParameters })}
+                onChange={handleUrlParametersChange}
               />
             </TabContent>
             <TabContent value={TAB_MESSAGE}>

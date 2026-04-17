@@ -1,9 +1,10 @@
 import { type } from "@tauri-apps/plugin-os";
+import { t } from "./i18n";
 
 const os = type();
 export const revealInFinderText =
   os === "macos"
-    ? "Reveal in Finder"
+    ? t("Reveal in Finder")
     : os === "windows"
-      ? "Show in Explorer"
-      : "Show in File Manager";
+      ? t("Show in Explorer")
+      : t("Show in File Manager");

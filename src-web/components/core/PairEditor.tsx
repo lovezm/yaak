@@ -18,6 +18,7 @@ import { useToggle } from "../../hooks/useToggle";
 import { languageFromContentType } from "../../lib/contentType";
 import { showDialog } from "../../lib/dialog";
 import { computeSideForDragMove } from "../../lib/dnd";
+import { t } from "../../lib/i18n";
 import { showPrompt } from "../../lib/prompt";
 import { DropMarker } from "../DropMarker";
 import { SelectFile } from "../SelectFile";
@@ -60,6 +61,7 @@ export type PairEditorProps = {
   valueAutocomplete?: (name: string) => GenericCompletionConfig | undefined;
   valueAutocompleteFunctions?: boolean;
   valueAutocompleteVariables?: boolean | "environment";
+  valueOptions?: (pair: Pair) => RadioDropdownItem<string>[] | undefined;
   valuePlaceholder?: string;
   valueType?: InputProps["type"] | ((pair: Pair) => InputProps["type"]);
   valueValidate?: InputProps["validate"];
@@ -101,6 +103,7 @@ export function PairEditor({
   valueAutocomplete,
   valueAutocompleteFunctions,
   valueAutocompleteVariables,
+  valueOptions,
   valuePlaceholder,
   valueType,
   valueValidate,
@@ -321,6 +324,7 @@ export function PairEditor({
                   valueAutocomplete={valueAutocomplete}
                   valueAutocompleteFunctions={valueAutocompleteFunctions}
                   valueAutocompleteVariables={valueAutocompleteVariables}
+                  valueOptions={valueOptions}
                   valuePlaceholder={valuePlaceholder}
                   valueType={valueType}
                   valueValidate={valueValidate}
@@ -392,6 +396,7 @@ type PairEditorRowProps = {
   | "valueAutocomplete"
   | "valueAutocompleteFunctions"
   | "valueAutocompleteVariables"
+  | "valueOptions"
   | "valuePlaceholder"
   | "valueType"
   | "valueValidate"
@@ -427,6 +432,7 @@ export function PairEditorRow({
   valueAutocomplete,
   valueAutocompleteFunctions,
   valueAutocompleteVariables,
+  valueOptions,
   valuePlaceholder,
   valueType,
   valueValidate,
@@ -544,6 +550,38 @@ export function PairEditorRow({
     return valueAutocompleteVariables;
   }, [pair.name, valueAutocompleteVariables]);
 
+  const valueOptionsItems = useMemo(() => valueOptions?.(pair), [pair, valueOptions]);
+  const valueQuickSelect = useMemo(() => {
+    if (
+      disabled ||
+      isLast ||
+      isDraggingGlobal ||
+      valueOptionsItems == null ||
+      valueOptionsItems.length === 0
+    ) {
+      return null;
+    }
+
+    return (
+      <RadioDropdown value={pair.value} onChange={handleChangeValueText} items={valueOptionsItems}>
+        <IconButton
+          iconSize="sm"
+          size="xs"
+          icon="chevron_down"
+          title={t("Select common value")}
+          className="text-text-subtlest mr-0.5 !h-auto my-0.5"
+        />
+      </RadioDropdown>
+    );
+  }, [
+    disabled,
+    handleChangeValueText,
+    isDraggingGlobal,
+    isLast,
+    pair.value,
+    valueOptionsItems,
+  ]);
+
   const handleSetRef = useCallback(
     (n: HTMLDivElement | null) => {
       setDraggableRef(n);
@@ -657,6 +695,7 @@ export function PairEditorRow({
               autocomplete={valueAutocomplete?.(pair.name)}
               autocompleteFunctions={valueAutocompleteFunctions}
               autocompleteVariables={valueAutocompleteVariablesFiltered}
+              rightSlot={valueQuickSelect}
             />
           )}
         </div>

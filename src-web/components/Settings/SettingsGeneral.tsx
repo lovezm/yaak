@@ -4,6 +4,7 @@ import { useAtomValue } from "jotai";
 import { activeWorkspaceAtom } from "../../hooks/useActiveWorkspace";
 import { useCheckForUpdates } from "../../hooks/useCheckForUpdates";
 import { appInfo } from "../../lib/appInfo";
+import { t } from "../../lib/i18n";
 import { revealInFinderText } from "../../lib/reveal";
 import { CargoFeature } from "../CargoFeature";
 import { Checkbox } from "../core/Checkbox";
@@ -27,28 +28,30 @@ export function SettingsGeneral() {
   return (
     <VStack space={1.5} className="mb-4">
       <div className="mb-4">
-        <Heading>General</Heading>
-        <p className="text-text-subtle">Configure general settings for update behavior and more.</p>
+        <Heading>{t("General")}</Heading>
+        <p className="text-text-subtle">
+          {t("Configure general settings for update behavior and more.")}
+        </p>
       </div>
       <CargoFeature feature="updater">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1">
           <Select
             name="updateChannel"
-            label="Update Channel"
+            label={t("Update Channel")}
             labelPosition="left"
             labelClassName="w-[14rem]"
             size="sm"
             value={settings.updateChannel}
             onChange={(updateChannel) => patchModel(settings, { updateChannel })}
             options={[
-              { label: "Stable", value: "stable" },
-              { label: "Beta (more frequent)", value: "beta" },
+              { label: t("Stable"), value: "stable" },
+              { label: t("Beta (more frequent)"), value: "beta" },
             ]}
           />
           <IconButton
             variant="border"
             size="sm"
-            title="Check for updates"
+            title={t("Check for updates")}
             icon="refresh"
             spin={checkForUpdates.isPending}
             onClick={() => checkForUpdates.mutateAsync()}
@@ -58,38 +61,40 @@ export function SettingsGeneral() {
         <Select
           name="autoupdate"
           value={settings.autoupdate ? "auto" : "manual"}
-          label="Update Behavior"
+          label={t("Update Behavior")}
           labelPosition="left"
           size="sm"
           labelClassName="w-[14rem]"
           onChange={(v) => patchModel(settings, { autoupdate: v === "auto" })}
           options={[
-            { label: "Automatic", value: "auto" },
-            { label: "Manual", value: "manual" },
+            { label: t("Automatic"), value: "auto" },
+            { label: t("Manual"), value: "manual" },
           ]}
         />
         <Checkbox
           className="pl-2 mt-1 ml-[14rem]"
           checked={settings.autoDownloadUpdates}
           disabled={!settings.autoupdate}
-          help="Automatically download Yaak updates (!50MB) in the background, so they will be immediately ready to install."
-          title="Automatically download updates"
+          help={t(
+            "Automatically download Yaak updates (!50MB) in the background, so they will be immediately ready to install.",
+          )}
+          title={t("Automatically download updates")}
           onChange={(autoDownloadUpdates) => patchModel(settings, { autoDownloadUpdates })}
         />
 
         <Checkbox
           className="pl-2 mt-1 ml-[14rem]"
           checked={settings.checkNotifications}
-          title="Check for notifications"
-          help="Periodically ping Yaak servers to check for relevant notifications."
+          title={t("Check for notifications")}
+          help={t("Periodically ping Yaak servers to check for relevant notifications.")}
           onChange={(checkNotifications) => patchModel(settings, { checkNotifications })}
         />
         <Checkbox
           disabled
           className="pl-2 mt-1 ml-[14rem]"
           checked={false}
-          title="Send anonymous usage statistics"
-          help="Yaak is local-first and does not collect analytics or usage data 🔐"
+          title={t("Send anonymous usage statistics")}
+          help={t("Yaak is local-first and does not collect analytics or usage data 🔐")}
           onChange={(checkNotifications) => patchModel(settings, { checkNotifications })}
         />
       </CargoFeature>
@@ -97,7 +102,7 @@ export function SettingsGeneral() {
       <Separator className="my-4" />
 
       <Heading level={2}>
-        Workspace{" "}
+        {t("Workspace")}{" "}
         <div className="inline-block ml-1 bg-surface-highlight px-2 py-0.5 rounded text text-shrink">
           {workspace.name}
         </div>
@@ -107,7 +112,7 @@ export function SettingsGeneral() {
           required
           size="sm"
           name="requestTimeout"
-          label="Request Timeout (ms)"
+          label={t("Request Timeout (ms)")}
           labelClassName="w-[14rem]"
           placeholder="0"
           labelPosition="left"
@@ -121,8 +126,10 @@ export function SettingsGeneral() {
 
         <Checkbox
           checked={workspace.settingValidateCertificates}
-          help="When disabled, skip validation of server certificates, useful when interacting with self-signed certs."
-          title="Validate TLS certificates"
+          help={t(
+            "When disabled, skip validation of server certificates, useful when interacting with self-signed certs.",
+          )}
+          title={t("Validate TLS certificates")}
           onChange={(settingValidateCertificates) =>
             patchModel(workspace, { settingValidateCertificates })
           }
@@ -130,7 +137,7 @@ export function SettingsGeneral() {
 
         <Checkbox
           checked={workspace.settingFollowRedirects}
-          title="Follow redirects"
+          title={t("Follow redirects")}
           onChange={(settingFollowRedirects) =>
             patchModel(workspace, {
               settingFollowRedirects,
@@ -141,11 +148,11 @@ export function SettingsGeneral() {
 
       <Separator className="my-4" />
 
-      <Heading level={2}>App Info</Heading>
+      <Heading level={2}>{t("App Info")}</Heading>
       <KeyValueRows>
-        <KeyValueRow label="Version">{appInfo.version}</KeyValueRow>
+        <KeyValueRow label={t("Version")}>{appInfo.version}</KeyValueRow>
         <KeyValueRow
-          label="Data Directory"
+          label={t("Data Directory")}
           rightSlot={
             <IconButton
               title={revealInFinderText}
@@ -158,7 +165,7 @@ export function SettingsGeneral() {
           {appInfo.appDataDir}
         </KeyValueRow>
         <KeyValueRow
-          label="Logs Directory"
+          label={t("Logs Directory")}
           rightSlot={
             <IconButton
               title={revealInFinderText}

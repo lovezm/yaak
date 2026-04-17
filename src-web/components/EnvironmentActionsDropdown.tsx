@@ -3,6 +3,7 @@ import { memo, useMemo } from "react";
 import { useActiveEnvironment } from "../hooks/useActiveEnvironment";
 import { useEnvironmentsBreakdown } from "../hooks/useEnvironmentsBreakdown";
 import { editEnvironment } from "../lib/editEnvironment";
+import { t } from "../lib/i18n";
 import { setWorkspaceSearchParams } from "../lib/setWorkspaceSearchParams";
 import type { ButtonProps } from "./core/Button";
 import { Button } from "./core/Button";
@@ -41,10 +42,10 @@ export const EnvironmentActionsDropdown = memo(function EnvironmentActionsDropdo
         [activeEnvironment?.id],
       ),
       ...((subEnvironments.length > 0
-        ? [{ type: "separator", label: "Environments" }]
+        ? [{ type: "separator", label: t("Environments") }]
         : []) as DropdownItem[]),
       {
-        label: "Manage Environments",
+        label: t("Manage Environments"),
         hotKeyAction: "environment_editor.toggle",
         leftSlot: <Icon icon="box" />,
         onSelect: () => editEnvironment(activeEnvironment),
@@ -71,7 +72,7 @@ export const EnvironmentActionsDropdown = memo(function EnvironmentActionsDropdo
         {...buttonProps}
       >
         <EnvironmentColorIndicator environment={activeEnvironment ?? null} />
-        {activeEnvironment?.name ?? (hasBaseVars ? "Environment" : "No Environment")}
+        {activeEnvironment?.name ?? (hasBaseVars ? t("Environment") : t("No Environment"))}
       </Button>
     </Dropdown>
   );

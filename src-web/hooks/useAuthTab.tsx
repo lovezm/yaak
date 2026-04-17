@@ -10,6 +10,7 @@ import { HStack } from "../components/core/Stacks";
 import type { TabItem } from "../components/core/Tabs/Tabs";
 import { capitalize } from "../lib/capitalize";
 import { showConfirm } from "../lib/confirm";
+import { t } from "../lib/i18n";
 import { resolvedModelName } from "../lib/resolvedModelName";
 import { useHttpAuthenticationSummaries } from "./useHttpAuthentication";
 import type { AuthenticatedModel } from "./useInheritedAuthentication";
@@ -27,7 +28,7 @@ export function useAuthTab<T extends string>(tabValue: T, model: AuthenticatedMo
 
     const tab: TabItem = {
       value: tabValue,
-      label: "Auth",
+      label: t("Auth"),
       options: {
         value: model.authenticationType,
         items: [
@@ -51,7 +52,7 @@ export function useAuthTab<T extends string>(tabValue: T, model: AuthenticatedMo
                   />
                 </HStack>
               ) : (
-                "Auth"
+                t("Auth")
               ),
             value: null,
           },

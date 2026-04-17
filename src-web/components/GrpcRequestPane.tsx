@@ -8,6 +8,7 @@ import type { ReflectResponseService } from "../hooks/useGrpc";
 import { useHeadersTab } from "../hooks/useHeadersTab";
 import { useInheritedHeaders } from "../hooks/useInheritedHeaders";
 import { useRequestUpdateKey } from "../hooks/useRequestUpdateKey";
+import { t } from "../lib/i18n";
 import { resolvedModelName } from "../lib/resolvedModelName";
 import { Button } from "./core/Button";
 import { CountBadge } from "./core/CountBadge";
@@ -66,7 +67,7 @@ export function GrpcRequestPane({
   onSend,
 }: Props) {
   const authTab = useAuthTab(TAB_AUTH, activeRequest);
-  const metadataTab = useHeadersTab(TAB_METADATA, activeRequest, "Metadata");
+  const metadataTab = useHeadersTab(TAB_METADATA, activeRequest, t("Metadata"));
   const inheritedHeaders = useInheritedHeaders(activeRequest);
   const forceUpdateKey = useRequestUpdateKey(activeRequest.id ?? null);
 
@@ -113,8 +114,8 @@ export function GrpcRequestPane({
     if (activeRequest.service == null || activeRequest.method == null) {
       alert({
         id: "grpc-invalid-service-method",
-        title: "Error",
-        body: "Service or method not selected",
+        title: t("Error"),
+        body: t("Service or method not selected"),
       });
     }
     onGo();
@@ -127,12 +128,12 @@ export function GrpcRequestPane({
 
   const tabs: TabItem[] = useMemo(
     () => [
-      { value: TAB_MESSAGE, label: "Message" },
+      { value: TAB_MESSAGE, label: t("Message") },
       ...metadataTab,
       ...authTab,
       {
         value: TAB_DESCRIPTION,
-        label: "Info",
+        label: t("Info"),
         rightSlot: activeRequest.description && <CountBadge count={true} />,
       },
     ],
@@ -183,7 +184,7 @@ export function GrpcRequestPane({
             }))}
             itemsAfter={[
               {
-                label: "Refresh",
+                label: t("Refresh"),
                 type: "default",
                 leftSlot: <Icon size="sm" icon="refresh" />,
               },
@@ -199,7 +200,7 @@ export function GrpcRequestPane({
                 paneWidth < 400 && "flex-1",
               )}
             >
-              {select.options.find((o) => o.value === select.value)?.label ?? "No Schema"}
+              {select.options.find((o) => o.value === select.value)?.label ?? t("No Schema")}
             </Button>
           </RadioDropdown>
           {methodType === "client_streaming" || methodType === "streaming" ? (
@@ -209,14 +210,14 @@ export function GrpcRequestPane({
                   <IconButton
                     variant="border"
                     size="sm"
-                    title="Cancel"
+                    title={t("Cancel")}
                     onClick={onCancel}
                     icon="x"
                   />
                   <IconButton
                     variant="border"
                     size="sm"
-                    title="Commit"
+                    title={t("Commit")}
                     onClick={onCommit}
                     icon="check"
                   />
@@ -225,7 +226,7 @@ export function GrpcRequestPane({
               <IconButton
                 size="sm"
                 variant="border"
-                title={isStreaming ? "Connect" : "Send"}
+                title={isStreaming ? t("Connect") : t("Send")}
                 hotkeyAction="request.send"
                 onClick={isStreaming ? handleSend : handleConnect}
                 icon={isStreaming ? "send_horizontal" : "arrow_up_down"}
@@ -235,7 +236,7 @@ export function GrpcRequestPane({
             <IconButton
               size="sm"
               variant="border"
-              title={methodType === "unary" ? "Send" : "Connect"}
+              title={methodType === "unary" ? t("Send") : t("Connect")}
               hotkeyAction="request.send"
               onClick={isStreaming ? onCancel : handleConnect}
               disabled={methodType === "no-schema" || methodType === "no-method"}
@@ -251,7 +252,7 @@ export function GrpcRequestPane({
         </HStack>
       </div>
       <Tabs
-        label="Request"
+        label={t("Request")}
         tabs={tabs}
         tabListClassName="mt-1 !mb-1.5"
         storageKey="grpc_request_tabs"

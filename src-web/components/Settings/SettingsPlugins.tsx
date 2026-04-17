@@ -17,6 +17,7 @@ import { useInstallPlugin } from "../../hooks/useInstallPlugin";
 import { usePluginInfo } from "../../hooks/usePluginInfo";
 import { usePluginsKey, useRefreshPlugins } from "../../hooks/usePlugins";
 import { showConfirmDelete } from "../../lib/confirm";
+import { t } from "../../lib/i18n";
 import { minPromiseMillis } from "../../lib/minPromiseMillis";
 import { Button } from "../core/Button";
 import { Checkbox } from "../core/Checkbox";
@@ -48,18 +49,18 @@ export function SettingsPlugins({ defaultSubtab }: SettingsPluginsProps) {
     <div className="h-full">
       <Tabs
         defaultValue={defaultSubtab}
-        label="Plugins"
+        label={t("Plugins")}
         addBorders
         tabListClassName="px-6 pt-2"
         tabs={[
-          { label: "Discover", value: "search" },
+          { label: t("Discover"), value: "search" },
           {
-            label: "Installed",
+            label: t("Installed"),
             value: "installed",
             rightSlot: <CountBadge count={installedPlugins.length} />,
           },
           {
-            label: "Bundled",
+            label: t("Bundled"),
             value: "bundled",
             rightSlot: <CountBadge count={bundledPlugins.length} />,
           },
@@ -74,7 +75,7 @@ export function SettingsPlugins({ defaultSubtab }: SettingsPluginsProps) {
             <footer className="grid grid-cols-[minmax(0,1fr)_auto] py-2 px-4 border-t bg-surface-highlight border-border-subtle min-w-0">
               <SelectFile
                 size="xs"
-                noun="Plugin"
+                noun={t("Plugin")}
                 directory
                 onChange={({ filePath }) => setDirectory(filePath)}
                 filePath={directory}
@@ -91,20 +92,20 @@ export function SettingsPlugins({ defaultSubtab }: SettingsPluginsProps) {
                       setDirectory(null);
                     }}
                   >
-                    Add Plugin
+                    {t("Add Plugin")}
                   </Button>
                 )}
                 <IconButton
                   size="sm"
                   icon="refresh"
-                  title="Reload plugins"
+                  title={t("Reload plugins")}
                   spin={refreshPlugins.isPending}
                   onClick={() => refreshPlugins.mutate()}
                 />
                 <IconButton
                   size="sm"
                   icon="help"
-                  title="View documentation"
+                  title={t("View documentation")}
                   onClick={() =>
                     openUrl("https://yaak.app/docs/plugin-development/plugins-quick-start")
                   }
@@ -207,7 +208,7 @@ function PluginTableRow({
         <TableCell className="!py-0">
           <Checkbox
             hideLabel
-            title={plugin?.enabled ? "Disable plugin" : "Enable plugin"}
+            title={plugin?.enabled ? t("Disable plugin") : t("Enable plugin")}
             checked={plugin?.enabled ?? false}
             disabled={plugin == null}
             onChange={async (enabled) => {
@@ -248,34 +249,34 @@ function PluginTableRow({
             <Button
               variant="border"
               color="success"
-              title={`Update to ${latestVersion}`}
+              title={t("Update to {version}", { version: latestVersion })}
               size="xs"
               isLoading={installPluginMutation.isPending}
               onClick={() => installPluginMutation.mutate(name)}
             >
-              Update
+              {t("Update")}
             </Button>
           ) : plugin == null ? (
             <Button
               variant="border"
               color="primary"
-              title={`Install ${version}`}
+              title={t("Install {version}", { version })}
               size="xs"
               isLoading={installPluginMutation.isPending}
               onClick={() => installPluginMutation.mutate(name)}
             >
-              Install
+              {t("Install")}
             </Button>
           ) : null}
           {showUninstall && uninstall != null && (
             <Button
               size="xs"
-              title="Uninstall plugin"
+              title={t("Uninstall plugin")}
               variant="border"
               isLoading={uninstall.isPending}
               onClick={() => uninstall.mutate()}
             >
-              Uninstall
+              {t("Uninstall")}
             </Button>
           )}
         </HStack>
@@ -297,8 +298,8 @@ function PluginSearch() {
       <HStack space={1.5}>
         <PlainInput
           hideLabel
-          label="Search"
-          placeholder="Search plugins..."
+          label={t("Search")}
+          placeholder={t("Search plugins...")}
           onChange={setQuery}
           defaultValue={query}
         />
@@ -309,14 +310,14 @@ function PluginSearch() {
             <LoadingIcon size="xl" className="text-text-subtlest" />
           </EmptyStateText>
         ) : (results.data.plugins ?? []).length === 0 ? (
-          <EmptyStateText>No plugins found</EmptyStateText>
+          <EmptyStateText>{t("No plugins found")}</EmptyStateText>
         ) : (
           <Table scrollable>
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Display Name</TableHeaderCell>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Version</TableHeaderCell>
+                <TableHeaderCell>{t("Display Name")}</TableHeaderCell>
+                <TableHeaderCell>{t("Name")}</TableHeaderCell>
+                <TableHeaderCell>{t("Version")}</TableHeaderCell>
                 <TableHeaderCell />
               </TableRow>
             </TableHead>
@@ -336,9 +337,9 @@ function InstalledPlugins({ plugins, className }: { plugins: Plugin[]; className
   return plugins.length === 0 ? (
     <div className={classNames(className, "pb-4")}>
       <EmptyStateText className="text-center">
-        Plugins extend the functionality of Yaak.
+        {t("Plugins extend the functionality of Yaak.")}
         <br />
-        Add your first plugin to get started.
+        {t("Add your first plugin to get started.")}
       </EmptyStateText>
     </div>
   ) : (
@@ -346,9 +347,9 @@ function InstalledPlugins({ plugins, className }: { plugins: Plugin[]; className
       <TableHead>
         <TableRow>
           <TableHeaderCell className="w-0" />
-          <TableHeaderCell>Display Name</TableHeaderCell>
-          <TableHeaderCell>Name</TableHeaderCell>
-          <TableHeaderCell>Version</TableHeaderCell>
+          <TableHeaderCell>{t("Display Name")}</TableHeaderCell>
+          <TableHeaderCell>{t("Name")}</TableHeaderCell>
+          <TableHeaderCell>{t("Version")}</TableHeaderCell>
           <TableHeaderCell />
         </TableRow>
       </TableHead>
@@ -364,16 +365,16 @@ function InstalledPlugins({ plugins, className }: { plugins: Plugin[]; className
 function BundledPlugins({ plugins }: { plugins: Plugin[] }) {
   return plugins.length === 0 ? (
     <div className="pb-4">
-      <EmptyStateText className="text-center">No bundled plugins found.</EmptyStateText>
+      <EmptyStateText className="text-center">{t("No bundled plugins found.")}</EmptyStateText>
     </div>
   ) : (
     <Table scrollable>
       <TableHead>
         <TableRow>
           <TableHeaderCell className="w-0" />
-          <TableHeaderCell>Display Name</TableHeaderCell>
-          <TableHeaderCell>Name</TableHeaderCell>
-          <TableHeaderCell>Version</TableHeaderCell>
+          <TableHeaderCell>{t("Display Name")}</TableHeaderCell>
+          <TableHeaderCell>{t("Name")}</TableHeaderCell>
+          <TableHeaderCell>{t("Version")}</TableHeaderCell>
           <TableHeaderCell />
         </TableRow>
       </TableHead>
@@ -394,8 +395,8 @@ function usePromptUninstall(pluginId: string | null, name: string) {
 
       const confirmed = await showConfirmDelete({
         id: `uninstall-plugin-${pluginId}`,
-        title: "Uninstall Plugin",
-        confirmText: "Uninstall",
+        title: t("Uninstall Plugin"),
+        confirmText: t("Uninstall"),
         description: (
           <>
             Permanently uninstall <InlineCode>{name}</InlineCode>?

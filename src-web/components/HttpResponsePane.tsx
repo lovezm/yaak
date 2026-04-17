@@ -8,7 +8,9 @@ import { usePinnedHttpResponse } from "../hooks/usePinnedHttpResponse";
 import { useResponseBodyBytes, useResponseBodyText } from "../hooks/useResponseBodyText";
 import { useResponseViewMode } from "../hooks/useResponseViewMode";
 import { useTimelineViewMode } from "../hooks/useTimelineViewMode";
+import { useKeyValue } from "../hooks/useKeyValue";
 import { getMimeTypeFromContentType } from "../lib/contentType";
+import { t } from "../lib/i18n";
 import { getContentTypeFromHeaders, getCookieCounts } from "../lib/model_util";
 import { ConfirmLargeResponse } from "./ConfirmLargeResponse";
 import { ConfirmLargeResponseRequest } from "./ConfirmLargeResponseRequest";
@@ -28,6 +30,10 @@ import { TabContent, Tabs } from "./core/Tabs/Tabs";
 import { Tooltip } from "./core/Tooltip";
 import { EmptyStateText } from "./EmptyStateText";
 import { ErrorBoundary } from "./ErrorBoundary";
+import {
+  GeneratedRequestCode,
+  type GeneratedRequestCodeMode,
+} from "./GeneratedRequestCode";
 import { HttpResponseTimeline } from "./HttpResponseTimeline";
 import { RecentHttpResponsesDropdown } from "./RecentHttpResponsesDropdown";
 import { RequestBodyViewer } from "./RequestBodyViewer";
@@ -57,6 +63,7 @@ const TAB_REQUEST = "request";
 const TAB_HEADERS = "headers";
 const TAB_COOKIES = "cookies";
 const TAB_TIMELINE = "timeline";
+const TAB_CODE = "code";
 
 export type TimelineViewMode = "timeline" | "text";
 
@@ -65,10 +72,17 @@ interface RedirectDropWarning {
   droppedHeaders: string[];
 }
 
+const DEFAULT_CODE_MODE: GeneratedRequestCodeMode = "curl";
+
 export function HttpResponsePane({ style, className, activeRequestId }: Props) {
   const { activeResponse, setPinnedResponseId, responses } = usePinnedHttpResponse(activeRequestId);
   const [viewMode, setViewMode] = useResponseViewMode(activeResponse?.requestId);
   const [timelineViewMode, setTimelineViewMode] = useTimelineViewMode();
+  const { value: codeMode, set: setCodeMode } = useKeyValue<GeneratedRequestCodeMode>({
+    namespace: "no_sync",
+    key: "response_generated_code_mode",
+    fallback: DEFAULT_CODE_MODE,
+  });
   const contentType = getContentTypeFromHeaders(activeResponse?.headers ?? null);
   const mimeType = contentType == null ? null : getMimeTypeFromContentType(contentType).essence;
 
@@ -86,27 +100,27 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
     () => [
       {
         value: TAB_BODY,
-        label: "Response",
+        label: t("Response"),
         options: {
           value: viewMode,
           onChange: setViewMode,
           items: [
-            { label: "Response", value: "pretty" },
+            { label: t("Response"), value: "pretty" },
             ...(mimeType?.startsWith("image")
               ? []
-              : [{ label: "Response (Raw)", shortLabel: "Raw", value: "raw" }]),
+              : [{ label: t("Response (Raw)"), shortLabel: t("Raw"), value: "raw" }]),
           ],
         },
       },
       {
         value: TAB_REQUEST,
-        label: "Request",
+        label: t("Request"),
         rightSlot:
           (activeResponse?.requestContentLength ?? 0) > 0 ? <CountBadge count={true} /> : null,
       },
       {
         value: TAB_HEADERS,
-        label: "Headers",
+        label: t("Headers"),
         rightSlot: (
           <CountBadge
             count={activeResponse?.requestHeaders.length ?? 0}
@@ -117,7 +131,7 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
       },
       {
         value: TAB_COOKIES,
-        label: "Cookies",
+        label: t("Cookies"),
         rightSlot:
           cookieCounts.sent > 0 || cookieCounts.received > 0 ? (
             <CountBadge count={cookieCounts.sent} count2={cookieCounts.received} showZero />
@@ -130,8 +144,21 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
           value: timelineViewMode,
           onChange: (v) => setTimelineViewMode((v as TimelineViewMode) ?? "timeline"),
           items: [
-            { label: "Timeline", value: "timeline" },
-            { label: "Timeline (Text)", shortLabel: "Timeline", value: "text" },
+            { label: t("Timeline"), value: "timeline" },
+            { label: t("Timeline (Text)"), shortLabel: t("Timeline"), value: "text" },
+          ],
+        },
+      },
+      {
+        value: TAB_CODE,
+        options: {
+          value: codeMode ?? DEFAULT_CODE_MODE,
+          onChange: (v) => {
+            void setCodeMode((v as GeneratedRequestCodeMode) ?? DEFAULT_CODE_MODE);
+          },
+          items: [
+            { label: t("cURL"), shortLabel: t("Code"), value: "curl" },
+            { label: t("Python httpx"), shortLabel: t("Code"), value: "python" },
           ],
         },
       },
@@ -146,6 +173,8 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
       responseEvents.data?.length,
       setViewMode,
       viewMode,
+      codeMode,
+      setCodeMode,
       timelineViewMode,
       setTimelineViewMode,
     ],
@@ -201,25 +230,27 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
                     content={
                       <VStack alignItems="start" space={1} className="text-xs">
                         <span className="font-medium text-warning">
-                          Redirect changed this request
+                          {t("Redirect changed this request")}
                         </span>
                         {redirectDropWarning.droppedBodyCount > 0 && (
                           <span>
-                            Body dropped on {redirectDropWarning.droppedBodyCount}{" "}
-                            {redirectDropWarning.droppedBodyCount === 1
-                              ? "redirect hop"
-                              : "redirect hops"}
+                            {t("Body dropped on {count} {hop}", {
+                              count: redirectDropWarning.droppedBodyCount,
+                              hop:
+                                redirectDropWarning.droppedBodyCount === 1
+                                  ? t("redirect hop")
+                                  : t("redirect hops"),
+                            })}
                           </span>
                         )}
                         {redirectDropWarning.droppedHeaders.length > 0 && (
                           <span>
-                            Headers dropped:{" "}
-                            <span className="font-mono">
-                              {redirectDropWarning.droppedHeaders.join(", ")}
-                            </span>
+                            {t("Headers dropped: {headers}", {
+                              headers: redirectDropWarning.droppedHeaders.join(", "),
+                            })}
                           </span>
                         )}
-                        <span className="text-text-subtle">See Timeline for details.</span>
+                        <span className="text-text-subtle">{t("See Timeline for details.")}</span>
                       </VStack>
                     }
                   >
@@ -259,7 +290,7 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
             {/* Show tabs if we have any data (headers, body, etc.) even if there's an error */}
             <Tabs
               tabs={tabs}
-              label="Response"
+              label={t("Response")}
               className="ml-3 mr-3 mb-3 min-h-0 flex-1"
               tabListClassName="mt-0.5 -mb-1.5"
               storageKey="http_response_tabs"
@@ -274,16 +305,16 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
                           <VStack space={3}>
                             <HStack space={3}>
                               <LoadingIcon className="text-text-subtlest" />
-                              Sending Request
+                              {t("Sending Request")}
                             </HStack>
                             <Button size="sm" variant="border" onClick={() => cancel.mutate()}>
-                              Cancel
+                              {t("Cancel")}
                             </Button>
                           </VStack>
                         </EmptyStateText>
                       ) : activeResponse.state === "closed" &&
                         (activeResponse.contentLength ?? 0) === 0 ? (
-                        <EmptyStateText>Empty</EmptyStateText>
+                        <EmptyStateText>{t("Empty")}</EmptyStateText>
                       ) : mimeType?.match(/^text\/event-stream/i) && viewMode === "pretty" ? (
                         <EventStreamViewer response={activeResponse} />
                       ) : mimeType?.match(/^image\/svg/) ? (
@@ -324,6 +355,9 @@ export function HttpResponsePane({ style, className, activeRequestId }: Props) {
               </TabContent>
               <TabContent value={TAB_TIMELINE}>
                 <HttpResponseTimeline response={activeResponse} viewMode={timelineViewMode} />
+              </TabContent>
+              <TabContent value={TAB_CODE}>
+                <GeneratedRequestCode response={activeResponse} events={responseEvents.data} />
               </TabContent>
             </Tabs>
           </div>
@@ -373,12 +407,12 @@ function pushHeaderName(headers: Set<string>, headerName: string): void {
 
 function getRedirectWarningLabel(warning: RedirectDropWarning): string {
   if (warning.droppedBodyCount > 0 && warning.droppedHeaders.length > 0) {
-    return "Dropped body and headers";
+    return t("Dropped body and headers");
   }
   if (warning.droppedBodyCount > 0) {
-    return "Dropped body";
+    return t("Dropped body");
   }
-  return "Dropped headers";
+  return t("Dropped headers");
 }
 
 function EnsureCompleteResponse({

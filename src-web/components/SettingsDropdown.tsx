@@ -6,6 +6,7 @@ import { useCheckForUpdates } from "../hooks/useCheckForUpdates";
 import { useExportData } from "../hooks/useExportData";
 import { appInfo } from "../lib/appInfo";
 import { showDialog } from "../lib/dialog";
+import { t } from "../lib/i18n";
 import { importData } from "../lib/importData";
 import type { DropdownRef } from "./core/Dropdown";
 import { Dropdown } from "./core/Dropdown";
@@ -24,54 +25,54 @@ export function SettingsDropdown() {
       ref={dropdownRef}
       items={[
         {
-          label: "Settings",
+          label: t("Settings"),
           hotKeyAction: "settings.show",
           leftSlot: <Icon icon="settings" />,
           onSelect: () => openSettings.mutate(null),
         },
         {
-          label: "Keyboard shortcuts",
+          label: t("Keyboard shortcuts"),
           hotKeyAction: "hotkeys.showHelp",
           leftSlot: <Icon icon="keyboard" />,
           onSelect: () => {
             showDialog({
               id: "hotkey",
-              title: "Keyboard Shortcuts",
+              title: t("Keyboard Shortcuts"),
               size: "dynamic",
               render: () => <KeyboardShortcutsDialog />,
             });
           },
         },
         {
-          label: "Plugins",
+          label: t("Plugins"),
           leftSlot: <Icon icon="puzzle" />,
           onSelect: () => openSettings.mutate("plugins"),
         },
-        { type: "separator", label: "Share Workspace(s)" },
+        { type: "separator", label: t("Share Workspace(s)") },
         {
-          label: "Import Data",
+          label: t("Import Data"),
           leftSlot: <Icon icon="folder_input" />,
           onSelect: () => importData.mutate(),
         },
         {
-          label: "Export Data",
+          label: t("Export Data"),
           leftSlot: <Icon icon="folder_output" />,
           onSelect: () => exportData.mutate(),
         },
         {
-          label: "Create Run Button",
+          label: t("Create Run Button"),
           leftSlot: <Icon icon="rocket" />,
           onSelect: () => openUrl("https://yaak.app/button/new"),
         },
         { type: "separator", label: `Yaak v${appInfo.version}` },
         {
-          label: "Check for Updates",
+          label: t("Check for updates"),
           leftSlot: <Icon icon="update" />,
           hidden: !appInfo.featureUpdater,
           onSelect: () => checkForUpdates.mutate(),
         },
         {
-          label: "Purchase License",
+          label: t("Purchase License"),
           color: "success",
           hidden: check.data == null || check.data.status === "active",
           leftSlot: <Icon icon="circle_dollar_sign" />,
@@ -79,20 +80,20 @@ export function SettingsDropdown() {
           onSelect: () => openUrl("https://yaak.app/pricing"),
         },
         {
-          label: "Install CLI",
+          label: t("Install CLI"),
           hidden: appInfo.cliVersion != null,
           leftSlot: <Icon icon="square_terminal" />,
           rightSlot: <Icon icon="external_link" color="secondary" />,
           onSelect: () => openUrl("https://yaak.app/docs/cli"),
         },
         {
-          label: "Feedback",
+          label: t("Feedback"),
           leftSlot: <Icon icon="chat" />,
           rightSlot: <Icon icon="external_link" color="secondary" />,
           onSelect: () => openUrl("https://yaak.app/feedback"),
         },
         {
-          label: "Changelog",
+          label: t("Changelog"),
           leftSlot: <Icon icon="cake" />,
           rightSlot: <Icon icon="external_link" color="secondary" />,
           onSelect: () => openUrl(`https://yaak.app/changelog/${appInfo.version}`),
@@ -101,7 +102,7 @@ export function SettingsDropdown() {
     >
       <IconButton
         size="sm"
-        title="Main Menu"
+        title={t("Main Menu")}
         icon="settings"
         iconColor="secondary"
         className="pointer-events-auto"

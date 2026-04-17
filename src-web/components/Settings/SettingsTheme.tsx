@@ -13,6 +13,7 @@ import { Link } from "../core/Link";
 import type { SelectProps } from "../core/Select";
 import { Select } from "../core/Select";
 import { HStack, VStack } from "../core/Stacks";
+import { t } from "../../lib/i18n";
 
 const Editor = lazy(() => import("../core/Editor/Editor").then((m) => ({ default: m.Editor })));
 
@@ -72,25 +73,25 @@ export function SettingsTheme() {
   return (
     <VStack space={3} className="mb-4">
       <div className="mb-3">
-        <Heading>Theme</Heading>
+        <Heading>{t("Theme")}</Heading>
         <p className="text-text-subtle">
-          Make Yaak your own by selecting a theme, or{" "}
+          {t("Make Yaak your own by selecting a theme, or")}{" "}
           <Link href="https://yaak.app/docs/plugin-development/plugins-quick-start">
-            Create Your Own
+            {t("Create Your Own")}
           </Link>
         </p>
       </div>
       <Select
         name="appearance"
-        label="Appearance"
+        label={t("Appearance")}
         labelPosition="top"
         size="sm"
         value={settings.appearance}
         onChange={(appearance) => patchModel(settings, { appearance })}
         options={[
-          { label: "Automatic", value: "system" },
-          { label: "Light", value: "light" },
-          { label: "Dark", value: "dark" },
+          { label: t("Automatic"), value: "system" },
+          { label: t("Light"), value: "light" },
+          { label: t("Dark"), value: "dark" },
         ]}
       />
       <HStack space={2}>
@@ -99,7 +100,7 @@ export function SettingsTheme() {
             hideLabel
             leftSlot={<Icon icon="sun" color="secondary" />}
             name="lightTheme"
-            label="Light Theme"
+            label={t("Light Theme")}
             size="sm"
             className="flex-1"
             value={activeTheme.data.light.id}
@@ -112,7 +113,7 @@ export function SettingsTheme() {
             hideLabel
             name="darkTheme"
             className="flex-1"
-            label="Dark Theme"
+            label={t("Dark Theme")}
             leftSlot={<Icon icon="moon" color="secondary" />}
             size="sm"
             value={activeTheme.data.dark.id}
@@ -129,7 +130,7 @@ export function SettingsTheme() {
         <HStack className="text" space={1.5}>
           <Icon icon={appearance === "dark" ? "moon" : "sun"} />
           <strong>{activeTheme.data.active.label}</strong>
-          <em>(preview)</em>
+          <em>({t("preview")})</em>
         </HStack>
         <HStack space={1.5} className="w-full">
           {buttonColors.map((c, i) => (

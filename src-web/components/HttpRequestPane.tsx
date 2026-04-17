@@ -4,7 +4,7 @@ import type { GenericCompletionOption } from "@yaakapp-internal/plugins";
 import classNames from "classnames";
 import { atom, useAtomValue } from "jotai";
 import type { CSSProperties } from "react";
-import { lazy, Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { activeRequestIdAtom } from "../hooks/useActiveRequestId";
 import { allRequestsAtom } from "../hooks/useAllRequests";
 import { useAuthTab } from "../hooks/useAuthTab";
@@ -17,6 +17,7 @@ import { useRequestEditor, useRequestEditorEvent } from "../hooks/useRequestEdit
 import { useRequestUpdateKey } from "../hooks/useRequestUpdateKey";
 import { useSendAnyHttpRequest } from "../hooks/useSendAnyHttpRequest";
 import { deepEqualAtom } from "../lib/atoms";
+import { buildUrlFromParameters } from "../lib/buildUrlFromParameters";
 import { languageFromContentType } from "../lib/contentType";
 import { generateId } from "../lib/generateId";
 import {
@@ -33,6 +34,7 @@ import {
 import { prepareImportQuerystring } from "../lib/prepareImportQuerystring";
 import { resolvedModelName } from "../lib/resolvedModelName";
 import { showToast } from "../lib/toast";
+import { t } from "../lib/i18n";
 import { BinaryFileEditor } from "./BinaryFileEditor";
 import { ConfirmLargeRequestBody } from "./ConfirmLargeRequestBody";
 import { CountBadge } from "./core/CountBadge";
@@ -85,6 +87,7 @@ const memoNotActiveRequestUrlsAtom = deepEqualAtom(nonActiveRequestUrlsAtom);
 export function HttpRequestPane({ style, fullHeight, className, activeRequest }: Props) {
   const activeRequestId = activeRequest.id;
   const tabsRef = useRef<TabsRef>(null);
+  const [localUrl, setLocalUrl] = useState(activeRequest.url);
   const [forceUpdateHeaderEditorKey, setForceUpdateHeaderEditorKey] = useState<number>(0);
   const forceUpdateKey = useRequestUpdateKey(activeRequest.id ?? null);
   const [{ urlKey }, { forceUrlRefresh, forceParamsRefresh }] = useRequestEditor();
@@ -101,6 +104,10 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
     },
     [],
   );
+
+  useEffect(() => {
+    setLocalUrl(activeRequest.url);
+  }, [activeRequest.url]);
 
   const handleContentTypeChange = useCallback(
     async (contentType: string | null, patch: Partial<Omit<HttpRequest, "headers">> = {}) => {
@@ -176,7 +183,7 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
             },
             { type: "separator", label: "Other" },
             { label: "Binary File", value: BODY_TYPE_BINARY },
-            { label: "No Body", shortLabel: "Body", value: BODY_TYPE_NONE },
+            { label: "No Body", shortLabel: t("Body"), value: BODY_TYPE_NONE },
           ],
           onChange: async (bodyType) => {
             if (bodyType === activeRequest.bodyType) return;
@@ -230,13 +237,13 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
       {
         value: TAB_PARAMS,
         rightSlot: <CountBadge count={urlParameterPairs.length} />,
-        label: "Params",
+        label: t("Params"),
       },
       ...headersTab,
       ...authTab,
       {
         value: TAB_DESCRIPTION,
-        label: "Info",
+        label: t("Info"),
       },
     ],
     [
@@ -291,6 +298,7 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
         if (patch != null) {
           e.preventDefault(); // Prevent input onChange
 
+          setLocalUrl(patch.url);
           await patchModel(activeRequest, patch);
           await setActiveTab({
             storageKey: TABS_STORAGE_KEY,
@@ -315,8 +323,21 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
   );
 
   const handleUrlChange = useCallback(
-    (url: string) => patchModel(activeRequest, { url }),
+    (url: string) => {
+      setLocalUrl(url);
+      return patchModel(activeRequest, { url });
+    },
     [activeRequest],
+  );
+
+  const handleUrlParametersChange = useCallback(
+    async (urlParameters: HttpRequest["urlParameters"]) => {
+      const url = buildUrlFromParameters(localUrl, urlParameters);
+      setLocalUrl(url);
+      forceUrlRefresh();
+      await patchModel(activeRequest, { url, urlParameters });
+    },
+    [activeRequest, forceUrlRefresh, localUrl],
   );
 
   return (
@@ -329,7 +350,7 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
           <UrlBar
             stateKey={`url.${activeRequest.id}`}
             key={forceUpdateKey + urlKey}
-            url={activeRequest.url}
+            url={localUrl}
             placeholder="https://example.com"
             onPasteOverwrite={handlePaste}
             autocomplete={autocomplete}
@@ -369,7 +390,7 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
                 stateKey={`params.${activeRequest.id}`}
                 forceUpdateKey={forceUpdateKey + urlParametersKey}
                 pairs={urlParameterPairs}
-                onChange={(urlParameters) => patchModel(activeRequest, { urlParameters })}
+                onChange={handleUrlParametersChange}
               />
             </TabContent>
             <TabContent value={TAB_BODY}>

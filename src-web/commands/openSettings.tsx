@@ -3,6 +3,7 @@ import { activeWorkspaceIdAtom } from "../hooks/useActiveWorkspace";
 import { createFastMutation } from "../hooks/useFastMutation";
 import { jotaiStore } from "../lib/jotai";
 import { router } from "../lib/router";
+import { t } from "../lib/i18n";
 import { invokeCmd } from "../lib/tauri";
 
 // Allow tab with optional subtab (e.g., "plugins:installed")
@@ -23,7 +24,7 @@ export const openSettings = createFastMutation<void, string, SettingsTabWithSubt
     await invokeCmd("cmd_new_child_window", {
       url: location.href,
       label: "settings",
-      title: "Yaak Settings",
+      title: `Yaak${t("Settings")}`,
       innerSize: [750, 600],
     });
   },

@@ -5,6 +5,7 @@ import type {
 } from "@yaakapp-internal/models";
 import { type ReactNode, useMemo, useState } from "react";
 import { useHttpResponseEvents } from "../hooks/useHttpResponseEvents";
+import { t } from "../lib/i18n";
 import { Editor } from "./core/Editor/LazyEditor";
 import { type EventDetailAction, EventDetailHeader, EventViewer } from "./core/EventViewer";
 import { EventViewerRow } from "./core/EventViewerRow";
@@ -35,11 +36,11 @@ function Inner({ response, viewMode }: Props) {
   // Plain text view - show all events as text in an editor
   if (viewMode === "text") {
     if (isLoading) {
-      return <div className="p-4 text-text-subtlest">Loading events...</div>;
+      return <div className="p-4 text-text-subtlest">{t("Loading events...")}</div>;
     } else if (error) {
       return <div className="p-4 text-danger">{String(error)}</div>;
     } else if (!events || events.length === 0) {
-      return <div className="p-4 text-text-subtlest">No events recorded</div>;
+      return <div className="p-4 text-text-subtlest">{t("No events recorded")}</div>;
     } else {
       return (
         <Editor language="timeline" defaultValue={plainText} readOnly stateKey={null} hideGutter />
@@ -53,8 +54,8 @@ function Inner({ response, viewMode }: Props) {
       getEventKey={(event) => event.id}
       error={error ? String(error) : null}
       isLoading={isLoading}
-      loadingMessage="Loading events..."
-      emptyMessage="No events recorded"
+      loadingMessage={t("Loading events...")}
+      emptyMessage={t("No events recorded")}
       splitLayoutName="http_response_events"
       defaultRatio={0.25}
       renderRow={({ event, isActive, onClick }) => {
@@ -99,7 +100,7 @@ function EventDetails({
   const actions: EventDetailAction[] = [
     {
       key: "toggle-raw",
-      label: showRaw ? "Formatted" : "Text",
+      label: showRaw ? t("Formatted") : t("Text"),
       onClick: () => setShowRaw(!showRaw),
     },
   ];
@@ -108,23 +109,23 @@ function EventDetails({
   const title = (() => {
     switch (e.type) {
       case "header_up":
-        return "Header Sent";
+        return t("Header Sent");
       case "header_down":
-        return "Header Received";
+        return t("Header Received");
       case "send_url":
-        return "Request";
+        return t("Request");
       case "receive_url":
-        return "Response";
+        return t("Response");
       case "redirect":
-        return "Redirect";
+        return t("Redirect");
       case "setting":
-        return "Apply Setting";
+        return t("Apply Setting");
       case "chunk_sent":
-        return "Data Sent";
+        return t("Data Sent");
       case "chunk_received":
-        return "Data Received";
+        return t("Data Received");
       case "dns_resolved":
-        return e.overridden ? "DNS Override" : "DNS Resolution";
+        return e.overridden ? t("DNS Override") : t("DNS Resolution");
       default:
         return label;
     }
@@ -142,8 +143,8 @@ function EventDetails({
     if (e.type === "header_up" || e.type === "header_down") {
       return (
         <KeyValueRows>
-          <KeyValueRow label="Header">{e.name}</KeyValueRow>
-          <KeyValueRow label="Value">{e.value}</KeyValueRow>
+          <KeyValueRow label={t("Header")}>{e.name}</KeyValueRow>
+          <KeyValueRow label={t("Value")}>{e.value}</KeyValueRow>
         </KeyValueRows>
       );
     }
@@ -159,16 +160,16 @@ function EventDetails({
       const fullUrl = `${e.scheme}://${auth}${e.host}${portStr}${e.path}${query}${fragment}`;
       return (
         <KeyValueRows>
-          <KeyValueRow label="URL">{fullUrl}</KeyValueRow>
-          <KeyValueRow label="Method">{e.method}</KeyValueRow>
-          <KeyValueRow label="Scheme">{e.scheme}</KeyValueRow>
-          {e.username ? <KeyValueRow label="Username">{e.username}</KeyValueRow> : null}
-          {e.password ? <KeyValueRow label="Password">{e.password}</KeyValueRow> : null}
-          <KeyValueRow label="Host">{e.host}</KeyValueRow>
-          {!isDefaultPort ? <KeyValueRow label="Port">{e.port}</KeyValueRow> : null}
-          <KeyValueRow label="Path">{e.path}</KeyValueRow>
-          {e.query ? <KeyValueRow label="Query">{e.query}</KeyValueRow> : null}
-          {e.fragment ? <KeyValueRow label="Fragment">{e.fragment}</KeyValueRow> : null}
+          <KeyValueRow label={t("URL")}>{fullUrl}</KeyValueRow>
+          <KeyValueRow label={t("Method")}>{e.method}</KeyValueRow>
+          <KeyValueRow label={t("Scheme")}>{e.scheme}</KeyValueRow>
+          {e.username ? <KeyValueRow label={t("Username")}>{e.username}</KeyValueRow> : null}
+          {e.password ? <KeyValueRow label={t("Password")}>{e.password}</KeyValueRow> : null}
+          <KeyValueRow label={t("Host")}>{e.host}</KeyValueRow>
+          {!isDefaultPort ? <KeyValueRow label={t("Port")}>{e.port}</KeyValueRow> : null}
+          <KeyValueRow label={t("Path")}>{e.path}</KeyValueRow>
+          {e.query ? <KeyValueRow label={t("Query")}>{e.query}</KeyValueRow> : null}
+          {e.fragment ? <KeyValueRow label={t("Fragment")}>{e.fragment}</KeyValueRow> : null}
         </KeyValueRows>
       );
     }
@@ -177,8 +178,8 @@ function EventDetails({
     if (e.type === "receive_url") {
       return (
         <KeyValueRows>
-          <KeyValueRow label="HTTP Version">{e.version}</KeyValueRow>
-          <KeyValueRow label="Status">
+          <KeyValueRow label={t("HTTP Version")}>{e.version}</KeyValueRow>
+          <KeyValueRow label={t("Status")}>
             <HttpStatusTagRaw status={e.status} />
           </KeyValueRow>
         </KeyValueRows>
@@ -190,15 +191,17 @@ function EventDetails({
       const droppedHeaders = e.dropped_headers ?? [];
       return (
         <KeyValueRows>
-          <KeyValueRow label="Status">
+          <KeyValueRow label={t("Status")}>
             <HttpStatusTagRaw status={e.status} />
           </KeyValueRow>
-          <KeyValueRow label="Location">{e.url}</KeyValueRow>
-          <KeyValueRow label="Behavior">
-            {e.behavior === "drop_body" ? "Drop body, change to GET" : "Preserve method and body"}
+          <KeyValueRow label={t("Location")}>{e.url}</KeyValueRow>
+          <KeyValueRow label={t("Behavior")}>
+            {e.behavior === "drop_body"
+              ? t("Drop body, change to GET")
+              : t("Preserve method and body")}
           </KeyValueRow>
-          <KeyValueRow label="Body Dropped">{e.dropped_body ? "Yes" : "No"}</KeyValueRow>
-          <KeyValueRow label="Headers Dropped">
+          <KeyValueRow label={t("Body Dropped")}>{e.dropped_body ? t("Yes") : t("No")}</KeyValueRow>
+          <KeyValueRow label={t("Headers Dropped")}>
             {droppedHeaders.length > 0 ? droppedHeaders.join(", ") : "--"}
           </KeyValueRow>
         </KeyValueRows>
@@ -209,8 +212,8 @@ function EventDetails({
     if (e.type === "setting") {
       return (
         <KeyValueRows>
-          <KeyValueRow label="Setting">{e.name}</KeyValueRow>
-          <KeyValueRow label="Value">{e.value}</KeyValueRow>
+          <KeyValueRow label={t("Setting")}>{e.name}</KeyValueRow>
+          <KeyValueRow label={t("Value")}>{e.value}</KeyValueRow>
         </KeyValueRows>
       );
     }
@@ -328,14 +331,14 @@ function getEventDisplay(event: HttpResponseEventData): EventDisplay {
       return {
         icon: "settings",
         color: "secondary",
-        label: "Setting",
+        label: t("Setting"),
         summary: `${event.name} = ${event.value}`,
       };
     case "info":
       return {
         icon: "info",
         color: "secondary",
-        label: "Info",
+        label: t("Info"),
         summary: event.message,
       };
     case "redirect": {
@@ -351,7 +354,7 @@ function getEventDisplay(event: HttpResponseEventData): EventDisplay {
       return {
         icon: "arrow_big_right_dash",
         color: "success",
-        label: "Redirect",
+        label: t("Redirect"),
         summary: `Redirecting ${event.status} ${event.url}${dropped ? ` (${dropped})` : ""}`,
       };
     }
@@ -359,28 +362,28 @@ function getEventDisplay(event: HttpResponseEventData): EventDisplay {
       return {
         icon: "arrow_big_up_dash",
         color: "primary",
-        label: "Request",
+        label: t("Request"),
         summary: `${event.method} ${event.path}${event.query ? `?${event.query}` : ""}${event.fragment ? `#${event.fragment}` : ""}`,
       };
     case "receive_url":
       return {
         icon: "arrow_big_down_dash",
         color: "info",
-        label: "Response",
+        label: t("Response"),
         summary: `${event.version} ${event.status}`,
       };
     case "header_up":
       return {
         icon: "arrow_big_up_dash",
         color: "primary",
-        label: "Header",
+        label: t("Header"),
         summary: `${event.name}: ${event.value}`,
       };
     case "header_down":
       return {
         icon: "arrow_big_down_dash",
         color: "info",
-        label: "Header",
+        label: t("Header"),
         summary: `${event.name}: ${event.value}`,
       };
 
@@ -402,7 +405,7 @@ function getEventDisplay(event: HttpResponseEventData): EventDisplay {
       return {
         icon: "globe",
         color: event.overridden ? "success" : "secondary",
-        label: event.overridden ? "DNS Override" : "DNS",
+        label: event.overridden ? t("DNS Override") : "DNS",
         summary: event.overridden
           ? `${event.hostname} → ${event.addresses.join(", ")} (overridden)`
           : `${event.hostname} → ${event.addresses.join(", ")} (${event.duration}ms)`,
