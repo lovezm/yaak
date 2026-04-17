@@ -1,15 +1,15 @@
-# 易语言代码生成计划
+# GitHub Actions 打包发布计划
 
-- [x] 确认当前代码生成面板只有 `cURL` 和 `Python httpx`
-- [x] 为生成面板新增易语言选项
-- [x] 按用户给的规则分别处理表单文本和 JSON 正文
-- [x] 调整文案与代码高亮配置
-- [x] 更新 lessons 并运行前端检查
+- [x] 梳理当前 Tauri 发布配置与现有工作流限制
+- [x] 设计适合 fork 使用的自动构建与覆盖发布方案
+- [x] 新增 macOS Apple Silicon 与 Windows x64 的发布工作流
+- [x] 验证工作流语法与关键命令
+- [x] 记录结果与使用说明
 
 ## Review
 
-- 响应面板的代码生成现在新增了易语言选项，和现有 `cURL`、`Python httpx` 并列
-- `application/x-www-form-urlencoded` 且正文可解析时，会按你给的模板生成 `类_POST数据类` 的 `.添加 (...)` 形式；JSON 和其它文本正文则生成 `局_提交数据 = ...` 的字符串表达式
-- 易语言代码会保留请求头写入逻辑，并继续沿用当前请求的真实 method / URL / headers / body
-- 文案已补充 `易语言` 标签，编辑器高亮对这一项改用纯文本模式，避免错误套用 Python / shell 高亮
-- 验证通过：`npm run --workspace src-web lint`
+- 新增了独立工作流 `.github/workflows/release-fork-overwrite.yml`，不改动上游原有 `release-app.yml`，避免和 upstream 正式发布链路混在一起
+- 新工作流支持 `push main` 和手动 `workflow_dispatch` 两种触发方式，分别构建 `macOS Apple Silicon` 与 `Windows x64`
+- 发布目标使用固定 tag `autobuild` 和固定 Release 标题 `Auto Build`；每次运行会先把 tag 移到最新提交，再删除旧附件，再上传本次新产物，实现覆盖式发布
+- 构建使用普通 `tauri.conf.json`，避开了上游正式发布里对苹果签名、Windows 签名、updater 私钥的依赖，更适合 fork 直接使用
+- 本地验证通过：`ruby -e 'require "yaml"; YAML.load_file(".github/workflows/release-fork-overwrite.yml"); puts "yaml ok"'`
