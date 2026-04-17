@@ -150,6 +150,9 @@ const zhCN: Record<string, string> = {
   Password: "密码",
   "Proxy Bypass": "代理绕过",
   "Comma-separated list to bypass the proxy.": "使用逗号分隔要绕过代理的地址列表。",
+  "Disable redirects": "禁止重定向",
+  "When enabled, this request will stop on 3xx responses instead of automatically following redirects. If disabled, it will continue using the workspace redirect setting.":
+    "启用后，这个请求在遇到 3xx 响应时会直接停下，不再自动跟随重定向；关闭后则继续使用工作区里的重定向设置。",
   "Supports IP:PORT, user:pass@IP:PORT, or user:pass:IP:PORT. If the value starts with http or https, it will be treated as a proxy API URL and fetched before the request is sent. Filled values only apply to this request.":
     "支持 `IP:PORT`、`账号:密码@IP:PORT`、`账号:密码:IP:PORT` 三种直连格式。若输入以 `http` 或 `https` 开头，则会被当作代理 API 地址，发送前先请求提取代理。填写后仅本次请求使用这个代理。",
   "Available formats:": "支持格式：",

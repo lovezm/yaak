@@ -1,0 +1,2 @@
+ALTER TABLE http_requests
+ADD COLUMN no_follow_redirects BOOLEAN DEFAULT FALSE NOT NULL;

@@ -1,12 +1,12 @@
-# 启动首页汉化计划
+# GitHub 自动检查关闭计划
 
-- [x] 定位启动首页空状态页面的文案来源
-- [x] 补充首页快捷操作与按钮的中文文案
-- [x] 运行前端检查
-- [x] 更新结果说明
+- [x] 检查当前仓库哪些 GitHub Actions 仍会自动触发
+- [x] 关闭不需要的自动检查触发，仅保留手动触发
+- [x] 更新任务记录并验证工作流语法
 
 ## Review
 
-- 已将启动首页空状态页下方按钮 `Import`、`New Request` 接入翻译层
-- 已将上方快捷提示 `New Request`、`Focus or Toggle Sidebar`、`Open Settings` 通过热键标签显示层统一接入翻译
-- 验证通过：`npm run --workspace src-web lint`
+- 已确认当前推送后自动跑的是 `.github/workflows/ci.yml` 的 `Lint and Test`
+- 已将 `ci.yml` 从 `push` / `pull_request` 改成仅 `workflow_dispatch`
+- 验证通过：`ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml"); puts "yaml ok"'`
+- 现在这条检查不会再在 `git push` 后自动触发，只能在 GitHub 的 `Actions` 页面手动运行

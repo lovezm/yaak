@@ -327,6 +327,7 @@ struct ParsedRequestProxy {
 pub fn resolve_http_send_runtime_config(
     query_manager: &QueryManager,
     workspace_id: &str,
+    no_follow_redirects: bool,
     request_proxy: Option<HttpConnectionProxySetting>,
 ) -> Result<HttpSendRuntimeConfig> {
     let db = query_manager.connect();
@@ -336,7 +337,10 @@ pub fn resolve_http_send_runtime_config(
 
     Ok(HttpSendRuntimeConfig {
         send_options: SendableHttpRequestOptions {
-            follow_redirects: workspace.setting_follow_redirects,
+            follow_redirects: resolve_follow_redirects(
+                workspace.setting_follow_redirects,
+                no_follow_redirects,
+            ),
             timeout: if workspace.setting_request_timeout > 0 {
                 Some(std::time::Duration::from_millis(
                     workspace.setting_request_timeout.unsigned_abs() as u64,
@@ -350,6 +354,10 @@ pub fn resolve_http_send_runtime_config(
         dns_overrides: workspace.setting_dns_overrides,
         client_certificates: settings.client_certificates,
     })
+}
+
+fn resolve_follow_redirects(workspace_follow_redirects: bool, no_follow_redirects: bool) -> bool {
+    workspace_follow_redirects && !no_follow_redirects
 }
 
 pub async fn send_http_request_by_id_with_plugins(
@@ -481,6 +489,7 @@ pub async fn send_http_request<T: TemplateCallback>(
     let runtime_config = resolve_http_send_runtime_config(
         params.query_manager,
         &params.request.workspace_id,
+        rendered_request.no_follow_redirects,
         request_proxy.map(|proxy| proxy.setting),
     )?;
     let send_options = params.send_options.unwrap_or(runtime_config.send_options.clone());
@@ -1289,5 +1298,12 @@ mod tests {
         assert!(is_proxy_api_input("http://example.com/get-proxy"));
         assert!(is_proxy_api_input("https://example.com/get-proxy"));
         assert!(!is_proxy_api_input("127.0.0.1:8080"));
+    }
+
+    #[test]
+    fn request_level_no_follow_redirects_overrides_workspace_setting() {
+        assert!(resolve_follow_redirects(true, false));
+        assert!(!resolve_follow_redirects(true, true));
+        assert!(!resolve_follow_redirects(false, false));
     }
 }

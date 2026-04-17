@@ -45,7 +45,7 @@ export type GrpcRequest = { model: "grpc_request", id: string, createdAt: string
  */
 url: string, };
 
-export type HttpRequest = { model: "http_request", id: string, createdAt: string, updatedAt: string, workspaceId: string, folderId: string | null, authentication: Record<string, any>, authenticationType: string | null, body: Record<string, any>, bodyType: string | null, description: string, headers: Array<HttpRequestHeader>, method: string, name: string, proxy?: string | null, sortPriority: number, url: string, 
+export type HttpRequest = { model: "http_request", id: string, createdAt: string, updatedAt: string, workspaceId: string, folderId: string | null, authentication: Record<string, any>, authenticationType: string | null, body: Record<string, any>, bodyType: string | null, description: string, headers: Array<HttpRequestHeader>, method: string, name: string, noFollowRedirects: boolean, proxy?: string | null, sortPriority: number, url: string, 
 /**
  * URL parameters used for both path placeholders (`:id`) and query string entries.
  */
