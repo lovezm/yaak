@@ -6,13 +6,13 @@ use std::sync::Arc;
 use yaak_models::models::DnsOverride;
 use yaak_tls::{ClientCertificateConfig, get_tls_config};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HttpConnectionProxySettingAuth {
     pub user: String,
     pub password: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum HttpConnectionProxySetting {
     Disabled,
     System,
@@ -24,7 +24,7 @@ pub enum HttpConnectionProxySetting {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct HttpConnectionOptions {
     pub id: String,
     pub validate_certificates: bool,
@@ -34,6 +34,32 @@ pub struct HttpConnectionOptions {
 }
 
 impl HttpConnectionOptions {
+    pub fn cache_key(&self) -> String {
+        let dns_overrides = self
+            .dns_overrides
+            .iter()
+            .map(|override_item| {
+                format!(
+                    "{}|{:?}|{:?}|{}",
+                    override_item.hostname,
+                    override_item.ipv4,
+                    override_item.ipv6,
+                    override_item.enabled
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(";");
+
+        format!(
+            "id={};validate={};proxy={:?};client_cert={:?};dns={}",
+            self.id,
+            self.validate_certificates,
+            self.proxy,
+            self.client_certificate,
+            dns_overrides,
+        )
+    }
+
     /// Build a reqwest Client and return it along with the DNS resolver.
     /// The resolver is returned separately so it can be configured per-request
     /// to emit DNS timing events to the appropriate channel.
@@ -92,6 +118,23 @@ fn build_enabled_proxy(
     debug!("Using proxy http={http} https={https} bypass={bypass}");
 
     let mut proxies = Vec::new();
+    let same_proxy = !http.is_empty() && http == https;
+
+    if same_proxy {
+        match Proxy::all(http.clone()) {
+            Ok(mut proxy) => {
+                if let Some(HttpConnectionProxySettingAuth { user, password }) = auth {
+                    debug!("Using shared proxy auth");
+                    proxy = proxy.basic_auth(user.as_str(), password.as_str());
+                }
+                proxies.push(proxy.no_proxy(reqwest::NoProxy::from_string(&bypass)));
+            }
+            Err(e) => {
+                warn!("Failed to apply shared proxy {e:?}");
+            }
+        };
+        return proxies;
+    }
 
     if !http.is_empty() {
         match Proxy::http(http) {
@@ -124,4 +167,43 @@ fn build_enabled_proxy(
     }
 
     proxies
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cache_key_changes_when_proxy_changes() {
+        let base = HttpConnectionOptions {
+            id: "ctx-1".to_string(),
+            validate_certificates: true,
+            proxy: HttpConnectionProxySetting::System,
+            client_certificate: None,
+            dns_overrides: Vec::new(),
+        };
+        let with_proxy = HttpConnectionOptions {
+            proxy: HttpConnectionProxySetting::Enabled {
+                http: "http://127.0.0.1:8080".to_string(),
+                https: "http://127.0.0.1:8080".to_string(),
+                auth: None,
+                bypass: String::new(),
+            },
+            ..base.clone()
+        };
+
+        assert_ne!(base.cache_key(), with_proxy.cache_key());
+    }
+
+    #[test]
+    fn shared_http_proxy_builds_single_proxy_rule() {
+        let proxies = build_enabled_proxy(
+            "http://127.0.0.1:8080".to_string(),
+            "http://127.0.0.1:8080".to_string(),
+            None,
+            String::new(),
+        );
+
+        assert_eq!(proxies.len(), 1);
+    }
 }

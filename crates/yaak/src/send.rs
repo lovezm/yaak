@@ -8,8 +8,10 @@ use std::time::Instant;
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio::sync::watch;
+use tokio::time::{Duration, timeout};
 use yaak_crypto::manager::EncryptionManager;
 use yaak_http::client::{
     HttpConnectionOptions, HttpConnectionProxySetting, HttpConnectionProxySettingAuth,
@@ -64,6 +66,9 @@ pub enum SendHttpRequestError {
     #[error("Failed to render request templates: {0}")]
     RenderRequest(#[source] yaak_templates::error::Error),
 
+    #[error("Failed to resolve request proxy: {0}")]
+    ResolveRequestProxy(String),
+
     #[error("Failed to prepare request before send: {0}")]
     PrepareSendableRequest(String),
 
@@ -114,6 +119,7 @@ pub trait SendRequestExecutor: Send + Sync {
     async fn send(
         &self,
         sendable_request: SendableHttpRequest,
+        runtime_config: HttpSendRuntimeConfig,
         event_tx: mpsc::Sender<SenderHttpResponseEvent>,
         cookie_store: Option<CookieStore>,
     ) -> yaak_http::error::Result<yaak_http::sender::HttpResponse>;
@@ -126,6 +132,7 @@ impl SendRequestExecutor for DefaultSendRequestExecutor {
     async fn send(
         &self,
         sendable_request: SendableHttpRequest,
+        _runtime_config: HttpSendRuntimeConfig,
         event_tx: mpsc::Sender<SenderHttpResponseEvent>,
         cookie_store: Option<CookieStore>,
     ) -> yaak_http::error::Result<yaak_http::sender::HttpResponse> {
@@ -181,8 +188,6 @@ impl PrepareSendableRequest for PluginPrepareSendableRequest {
 struct ConnectionManagerSendRequestExecutor<'a> {
     connection_manager: &'a HttpConnectionManager,
     plugin_context_id: String,
-    query_manager: QueryManager,
-    workspace_id: String,
     cancelled_rx: Option<watch::Receiver<bool>>,
 }
 
@@ -191,12 +196,10 @@ impl SendRequestExecutor for ConnectionManagerSendRequestExecutor<'_> {
     async fn send(
         &self,
         sendable_request: SendableHttpRequest,
+        runtime_config: HttpSendRuntimeConfig,
         event_tx: mpsc::Sender<SenderHttpResponseEvent>,
         cookie_store: Option<CookieStore>,
     ) -> yaak_http::error::Result<yaak_http::sender::HttpResponse> {
-        let runtime_config =
-            resolve_http_send_runtime_config(&self.query_manager, &self.workspace_id)
-                .map_err(|e| yaak_http::error::Error::RequestError(e.to_string()))?;
         let client_certificate =
             find_client_certificate(&sendable_request.url, &runtime_config.client_certificates);
         let cached_client = self
@@ -305,6 +308,7 @@ pub struct SendHttpRequestResult {
     pub response_body: Vec<u8>,
 }
 
+#[derive(Clone)]
 pub struct HttpSendRuntimeConfig {
     pub send_options: SendableHttpRequestOptions,
     pub validate_certificates: bool,
@@ -313,13 +317,22 @@ pub struct HttpSendRuntimeConfig {
     pub client_certificates: Vec<ClientCertificate>,
 }
 
+#[derive(Clone, Debug)]
+struct ParsedRequestProxy {
+    setting: HttpConnectionProxySetting,
+    host: String,
+    port: u16,
+}
+
 pub fn resolve_http_send_runtime_config(
     query_manager: &QueryManager,
     workspace_id: &str,
+    request_proxy: Option<HttpConnectionProxySetting>,
 ) -> Result<HttpSendRuntimeConfig> {
     let db = query_manager.connect();
     let workspace = db.get_workspace(workspace_id).map_err(SendHttpRequestError::LoadWorkspace)?;
     let settings = db.get_settings();
+    let proxy = request_proxy.unwrap_or_else(|| proxy_setting_from_settings(settings.proxy));
 
     Ok(HttpSendRuntimeConfig {
         send_options: SendableHttpRequestOptions {
@@ -333,7 +346,7 @@ pub fn resolve_http_send_runtime_config(
             },
         },
         validate_certificates: workspace.setting_validate_certificates,
-        proxy: proxy_setting_from_settings(settings.proxy),
+        proxy,
         dns_overrides: workspace.setting_dns_overrides,
         client_certificates: settings.client_certificates,
     })
@@ -386,8 +399,6 @@ pub async fn send_http_request_with_plugins(
         params.connection_manager.map(|connection_manager| ConnectionManagerSendRequestExecutor {
             connection_manager,
             plugin_context_id: params.plugin_context.id.clone(),
-            query_manager: params.query_manager.clone(),
-            workspace_id: params.request.workspace_id.clone(),
             cancelled_rx: params.cancelled_rx.clone(),
         });
 
@@ -454,9 +465,6 @@ pub async fn send_http_request<T: TemplateCallback>(
         } else {
             resolve_inherited_request(params.query_manager, &params.request)?
         };
-    let runtime_config =
-        resolve_http_send_runtime_config(params.query_manager, &params.request.workspace_id)?;
-    let send_options = params.send_options.unwrap_or(runtime_config.send_options);
     let mut cookie_jar = load_cookie_jar(params.query_manager, params.cookie_jar_id.as_deref())?;
     let cookie_store =
         cookie_jar.as_ref().map(|jar| CookieStore::from_cookies(jar.cookies.clone()));
@@ -469,6 +477,13 @@ pub async fn send_http_request<T: TemplateCallback>(
     )
     .await
     .map_err(SendHttpRequestError::RenderRequest)?;
+    let request_proxy = resolve_request_proxy(rendered_request.proxy.as_deref()).await?;
+    let runtime_config = resolve_http_send_runtime_config(
+        params.query_manager,
+        &params.request.workspace_id,
+        request_proxy.map(|proxy| proxy.setting),
+    )?;
+    let send_options = params.send_options.unwrap_or(runtime_config.send_options.clone());
 
     let mut sendable_request =
         SendableHttpRequest::from_http_request(&rendered_request, send_options)
@@ -586,7 +601,7 @@ pub async fn send_http_request<T: TemplateCallback>(
     let request_started_url = sendable_request.url.clone();
 
     let mut http_response = match executor
-        .send(sendable_request, event_tx, cookie_store.clone())
+        .send(sendable_request, runtime_config, event_tx, cookie_store.clone())
         .await
     {
         Ok(response) => response,
@@ -944,6 +959,155 @@ fn proxy_setting_from_settings(proxy: Option<ProxySetting>) -> HttpConnectionPro
     }
 }
 
+async fn resolve_request_proxy(proxy: Option<&str>) -> Result<Option<ParsedRequestProxy>> {
+    let Some(proxy) = proxy else {
+        return Ok(None);
+    };
+    let proxy = proxy.trim();
+    if proxy.is_empty() {
+        return Ok(None);
+    }
+
+    let proxy_value = if is_proxy_api_input(proxy) {
+        fetch_proxy_from_api(proxy).await?
+    } else {
+        proxy.to_string()
+    };
+
+    let parsed = parse_request_proxy(proxy_value.trim()).ok_or_else(|| {
+        SendHttpRequestError::ResolveRequestProxy(format!("Unsupported proxy format: {proxy_value}"))
+    })?;
+
+    validate_proxy_connectivity(&parsed).await?;
+    Ok(Some(parsed))
+}
+
+fn parse_request_proxy(proxy: &str) -> Option<ParsedRequestProxy> {
+    let proxy = proxy.trim();
+    if proxy.is_empty() {
+        return None;
+    }
+
+    let (scheme, proxy) = match proxy.split_once("://") {
+        Some((scheme, rest)) if !scheme.trim().is_empty() && !rest.trim().is_empty() => {
+            (format!("{}://", scheme.trim()), rest.trim())
+        }
+        _ => ("http://".to_string(), proxy),
+    };
+
+    let (auth, host, port_str) = if let Some((auth_part, host_part)) = proxy.rsplit_once('@') {
+        let (user, password) = auth_part.split_once(':')?;
+        let (host, port) = split_host_and_port(host_part)?;
+        (
+            Some(HttpConnectionProxySettingAuth {
+                user: user.trim().to_string(),
+                password: password.trim().to_string(),
+            }),
+            host,
+            port,
+        )
+    } else {
+        let parts = proxy.split(':').map(str::trim).collect::<Vec<_>>();
+        match parts.len() {
+            2 => (None, parts[0].to_string(), parts[1].to_string()),
+            len if len >= 4 => (
+                Some(HttpConnectionProxySettingAuth {
+                    user: parts[0].to_string(),
+                    password: parts[1..len - 2].join(":"),
+                }),
+                parts[len - 2].to_string(),
+                parts[len - 1].to_string(),
+            ),
+            _ => return None,
+        }
+    };
+
+    if host.is_empty() || port_str.is_empty() {
+        return None;
+    }
+
+    let port = port_str.parse::<u16>().ok()?;
+
+    let proxy_url = format!("{scheme}{host}:{port}");
+    Some(ParsedRequestProxy {
+        setting: HttpConnectionProxySetting::Enabled {
+            http: proxy_url.clone(),
+            https: proxy_url,
+            auth,
+            bypass: String::new(),
+        },
+        host,
+        port,
+    })
+}
+
+fn is_proxy_api_input(proxy: &str) -> bool {
+    let proxy = proxy.trim().to_ascii_lowercase();
+    proxy.starts_with("http://") || proxy.starts_with("https://")
+}
+
+async fn fetch_proxy_from_api(url: &str) -> Result<String> {
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .build()
+        .map_err(|e| SendHttpRequestError::ResolveRequestProxy(format!("Failed to build proxy API client: {e}")))?;
+    let response = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| SendHttpRequestError::ResolveRequestProxy(format!("Failed to request proxy API: {e}")))?;
+    let response = response
+        .error_for_status()
+        .map_err(|e| SendHttpRequestError::ResolveRequestProxy(format!("Proxy API returned error: {e}")))?;
+    let text = response
+        .text()
+        .await
+        .map_err(|e| SendHttpRequestError::ResolveRequestProxy(format!("Failed to read proxy API response: {e}")))?;
+
+    extract_proxy_from_text(&text).ok_or_else(|| {
+        SendHttpRequestError::ResolveRequestProxy(format!(
+            "Proxy API did not return a valid proxy endpoint: {}",
+            text.trim()
+        ))
+    })
+}
+
+fn extract_proxy_from_text(text: &str) -> Option<String> {
+    text.split(|c: char| c.is_whitespace() || [',', ';'].contains(&c))
+        .map(|part| part.trim_matches(|c: char| matches!(c, '"' | '\'' | '[' | ']' | '(' | ')' )))
+        .find(|part| !part.is_empty() && parse_request_proxy(part).is_some())
+        .map(str::to_string)
+}
+
+async fn validate_proxy_connectivity(proxy: &ParsedRequestProxy) -> Result<()> {
+    let address = format!("{}:{}", proxy.host, proxy.port);
+    let stream = timeout(Duration::from_secs(3), TcpStream::connect(address.as_str()))
+        .await
+        .map_err(|_| {
+            SendHttpRequestError::ResolveRequestProxy(format!(
+                "Proxy connection timed out: {address}"
+            ))
+        })?
+        .map_err(|e| {
+            SendHttpRequestError::ResolveRequestProxy(format!(
+                "Failed to connect to proxy {address}: {e}"
+            ))
+        })?;
+    drop(stream);
+    Ok(())
+}
+
+fn split_host_and_port(value: &str) -> Option<(String, String)> {
+    let (host, port) = value.rsplit_once(':')?;
+    let host = host.trim().to_string();
+    let port = port.trim().to_string();
+    if host.is_empty() || port.is_empty() {
+        None
+    } else {
+        Some((host, port))
+    }
+}
+
 pub async fn apply_plugin_authentication(
     sendable_request: &mut SendableHttpRequest,
     request: &HttpRequest,
@@ -1046,4 +1210,84 @@ fn u64_to_i32(value: u64) -> i32 {
 
 fn u128_to_i32(value: u128) -> i32 {
     if value > i32::MAX as u128 { i32::MAX } else { value as i32 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_proxy_with_user_pass_at_host() {
+        let parsed = parse_request_proxy("alice:secret@127.0.0.1:8080");
+        match parsed {
+            Some(ParsedRequestProxy {
+                setting: HttpConnectionProxySetting::Enabled { http, https, auth, bypass },
+                host,
+                port,
+            }) => {
+                assert_eq!(http, "http://127.0.0.1:8080");
+                assert_eq!(https, "http://127.0.0.1:8080");
+                assert_eq!(bypass, "");
+                assert_eq!(host, "127.0.0.1");
+                assert_eq!(port, 8080);
+                let auth = auth.expect("expected auth");
+                assert_eq!(auth.user, "alice");
+                assert_eq!(auth.password, "secret");
+            }
+            _ => panic!("expected enabled proxy"),
+        }
+    }
+
+    #[test]
+    fn parses_proxy_with_colon_separated_credentials() {
+        let parsed = parse_request_proxy("alice:secret:10.0.0.8:9000");
+        match parsed {
+            Some(ParsedRequestProxy {
+                setting: HttpConnectionProxySetting::Enabled { http, https, auth, .. },
+                host,
+                port,
+            }) => {
+                assert_eq!(http, "http://10.0.0.8:9000");
+                assert_eq!(https, "http://10.0.0.8:9000");
+                assert_eq!(host, "10.0.0.8");
+                assert_eq!(port, 9000);
+                let auth = auth.expect("expected auth");
+                assert_eq!(auth.user, "alice");
+                assert_eq!(auth.password, "secret");
+            }
+            _ => panic!("expected enabled proxy"),
+        }
+    }
+
+    #[test]
+    fn parses_proxy_without_credentials() {
+        let parsed = parse_request_proxy("192.168.1.20:3128");
+        match parsed {
+            Some(ParsedRequestProxy {
+                setting: HttpConnectionProxySetting::Enabled { http, https, auth, .. },
+                host,
+                port,
+            }) => {
+                assert_eq!(http, "http://192.168.1.20:3128");
+                assert_eq!(https, "http://192.168.1.20:3128");
+                assert_eq!(host, "192.168.1.20");
+                assert_eq!(port, 3128);
+                assert!(auth.is_none());
+            }
+            _ => panic!("expected enabled proxy"),
+        }
+    }
+
+    #[test]
+    fn extracts_proxy_from_api_text_response() {
+        let extracted = extract_proxy_from_text("117.88.12.34:9000\r\n");
+        assert_eq!(extracted.as_deref(), Some("117.88.12.34:9000"));
+    }
+
+    #[test]
+    fn treats_http_input_as_proxy_api() {
+        assert!(is_proxy_api_input("http://example.com/get-proxy"));
+        assert!(is_proxy_api_input("https://example.com/get-proxy"));
+        assert!(!is_proxy_api_input("127.0.0.1:8080"));
+    }
 }

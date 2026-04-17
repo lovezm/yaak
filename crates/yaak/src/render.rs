@@ -83,10 +83,23 @@ pub async fn render_http_request<T: TemplateCallback>(
         auth
     };
 
+    let proxy = match request.proxy.as_ref() {
+        Some(proxy) => Some(parse_and_render(proxy.as_str(), vars, callback, options).await?),
+        None => None,
+    };
+
     let url = parse_and_render(request.url.clone().as_str(), vars, callback, options).await?;
     let (url, url_parameters) = apply_path_placeholders(&url, &url_parameters);
 
-    Ok(HttpRequest { url, url_parameters, headers, body, authentication, ..request.to_owned() })
+    Ok(HttpRequest {
+        url,
+        url_parameters,
+        headers,
+        body,
+        authentication,
+        proxy,
+        ..request.to_owned()
+    })
 }
 
 pub async fn render_grpc_request<T: TemplateCallback>(

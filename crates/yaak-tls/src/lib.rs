@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 pub mod error;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ClientCertificateConfig {
     pub crt_file: Option<String>,
     pub key_file: Option<String>,

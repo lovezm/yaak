@@ -8,9 +8,10 @@ publish = false
 async-trait = "0.1"
 log = { workspace = true }
 md5 = "0.8.0"
+reqwest = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["sync", "rt"] }
+tokio = { workspace = true, features = ["sync", "rt", "net", "time"] }
 yaak-http = { workspace = true }
 yaak-crypto = { workspace = true }
 yaak-models = { workspace = true }

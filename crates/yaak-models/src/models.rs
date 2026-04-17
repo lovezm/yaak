@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::models::HttpRequestIden::{
     Authentication, AuthenticationType, Body, BodyType, CreatedAt, Description, FolderId, Headers,
-    Method, Name, SortPriority, UpdatedAt, Url, UrlParameters, WorkspaceId,
+    Method, Name, Proxy, SortPriority, UpdatedAt, Url, UrlParameters, WorkspaceId,
 };
 use crate::util::{UpdateSource, generate_prefixed_id};
 use chrono::{NaiveDateTime, Utc};
@@ -879,6 +879,8 @@ pub struct HttpRequest {
     #[serde(default = "default_http_method")]
     pub method: String,
     pub name: String,
+    #[ts(optional, as = "Option<String>")]
+    pub proxy: Option<String>,
     pub sort_priority: f64,
     pub url: String,
     /// URL parameters used for both path placeholders (`:id`) and query string entries.
@@ -925,6 +927,7 @@ impl UpsertModelInfo for HttpRequest {
             (Authentication, serde_json::to_string(&self.authentication)?.into()),
             (AuthenticationType, self.authentication_type.into()),
             (Headers, serde_json::to_string(&self.headers)?.into()),
+            (Proxy, self.proxy.into()),
             (SortPriority, self.sort_priority.into()),
         ])
     }
@@ -944,6 +947,7 @@ impl UpsertModelInfo for HttpRequest {
             AuthenticationType,
             Url,
             UrlParameters,
+            Proxy,
             SortPriority,
         ]
     }
@@ -968,6 +972,7 @@ impl UpsertModelInfo for HttpRequest {
             headers: serde_json::from_str(headers.as_str()).unwrap_or_default(),
             method: row.get("method")?,
             name: row.get("name")?,
+            proxy: row.get("proxy")?,
             sort_priority: row.get("sort_priority")?,
             url: row.get("url")?,
             url_parameters: serde_json::from_str(url_parameters.as_str()).unwrap_or_default(),

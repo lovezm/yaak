@@ -10221,6 +10221,7 @@ dependencies = [
  "async-trait",
  "log 0.4.29",
  "md5 0.8.0",
+ "reqwest",
  "serde_json",
  "tempfile",
  "thiserror 2.0.17",

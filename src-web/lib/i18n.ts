@@ -150,6 +150,9 @@ const zhCN: Record<string, string> = {
   Password: "密码",
   "Proxy Bypass": "代理绕过",
   "Comma-separated list to bypass the proxy.": "使用逗号分隔要绕过代理的地址列表。",
+  "Supports IP:PORT, user:pass@IP:PORT, or user:pass:IP:PORT. If the value starts with http or https, it will be treated as a proxy API URL and fetched before the request is sent. Filled values only apply to this request.":
+    "支持 `IP:PORT`、`账号:密码@IP:PORT`、`账号:密码:IP:PORT` 三种直连格式。若输入以 `http` 或 `https` 开头，则会被当作代理 API 地址，发送前先请求提取代理。填写后仅本次请求使用这个代理。",
+  "Available formats:": "支持格式：",
   Params: "Params",
   Headers: "请求头",
   Auth: "认证",
@@ -245,6 +248,7 @@ const zhCN: Record<string, string> = {
   "Copy generated code": "复制生成代码",
   cURL: "cURL",
   "Python httpx": "Python httpx",
+  "E Language": "易语言",
   "Failed to load request body for code generation": "读取请求体失败，无法完整生成代码",
   "Request body omitted because it is too large to inline.": "请求体过大，已在生成代码时省略内联内容。",
   "Request body omitted because multipart data is not safe to inline.":

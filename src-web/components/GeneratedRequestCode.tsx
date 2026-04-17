@@ -13,7 +13,7 @@ import { HStack, VStack } from "./core/Stacks";
 import { EmptyStateText } from "./EmptyStateText";
 import { CopyIconButton } from "./CopyIconButton";
 
-export type GeneratedRequestCodeMode = "curl" | "python";
+export type GeneratedRequestCodeMode = "curl" | "python" | "e";
 
 interface Props {
   response: HttpResponse;
@@ -82,6 +82,7 @@ export function GeneratedRequestCode({ response, events }: Props) {
           options={[
             { value: "curl", label: t("cURL") },
             { value: "python", label: t("Python httpx") },
+            { value: "e", label: t("E Language") },
           ]}
         />
         <CopyIconButton
@@ -108,7 +109,7 @@ export function GeneratedRequestCode({ response, events }: Props) {
           wrapLines
           defaultValue={generated.code}
           forceUpdateKey={generated.code}
-          language={activeMode === "curl" ? "shell" : "python"}
+          language={activeMode === "curl" ? "shell" : activeMode === "python" ? "python" : "text"}
           stateKey={`generated_request_code.${response.id}.${activeMode}`}
         />
       </div>
@@ -196,6 +197,13 @@ function buildGeneratedSnippet({
   bodyText: string | null;
   omittedReason: string | null;
 }) {
+  if (mode === "e") {
+    return {
+      code: buildELanguageCode({ method, url, headers, bodyText, omittedReason }),
+      warning: omittedReason,
+    };
+  }
+
   if (mode === "python") {
     return {
       code: buildHttpxCode({ method, url, headers, bodyText, omittedReason }),
@@ -288,10 +296,133 @@ function buildHttpxCode({
   return lines.join("\n");
 }
 
+function buildELanguageCode({
+  method,
+  url,
+  headers,
+  bodyText,
+  omittedReason,
+}: {
+  method: string;
+  url: string;
+  headers: Array<{ name: string; value: string }>;
+  bodyText: string | null;
+  omittedReason: string | null;
+}) {
+  const methodUpper = method.toUpperCase();
+  const isGet = methodUpper === "GET";
+  const isFormBody = isFormUrlencodedBody(headers, bodyText);
+  const methodValue = isGet ? 0 : 1;
+  const lines: string[] = [
+    ".版本 2",
+    "",
+    ".子程序 功能_网页访问, 文本型, ,",
+    ".局部变量  局_网址, 文本型",
+    ".局部变量  局_方式, 整数型",
+  ];
+
+  if (isFormBody) {
+    lines.push(".局部变量  ADD_数据包, 类_POST数据类");
+  }
+
+  lines.push(".局部变量  局_提交数据, 文本型");
+
+  if (headers.length > 0) {
+    lines.push(".局部变量  ADD_协议头, 类_POST数据类");
+    lines.push(".局部变量  局_提交协议头, 文本型");
+  }
+
+  lines.push(".局部变量  局_结果, 字节集");
+  lines.push(".局部变量  局_返回, 文本型");
+  lines.push("");
+  lines.push(`局_网址 = ${eStringLiteral(url)}`);
+  lines.push(`局_方式 = ${methodValue}`);
+  lines.push("");
+
+  if (methodUpper !== "GET" && methodUpper !== "POST") {
+    lines.push(`' 原请求方法为 ${methodUpper}，易语言模板默认按 POST 方式生成，请按需调整`);
+    lines.push("");
+  }
+
+  if (!isGet && bodyText != null) {
+    if (isFormBody) {
+      const params = new URLSearchParams(bodyText);
+      params.forEach((value, name) => {
+        lines.push(`ADD_数据包.添加 (${eStringLiteral(name)}, ${eStringLiteral(value)})`);
+      });
+      lines.push("");
+      lines.push("局_提交数据 = ADD_数据包.获取Post数据 ()");
+    } else {
+      lines.push(`局_提交数据 = ${eStringExpression(bodyText)}`);
+    }
+    lines.push("");
+  } else if (!isGet) {
+    lines.push('局_提交数据 = ""');
+    lines.push("");
+  }
+
+  if (headers.length > 0) {
+    headers.forEach((header) => {
+      lines.push(`ADD_协议头.添加 (${eStringLiteral(header.name)}, ${eStringLiteral(header.value)})`);
+    });
+    lines.push("");
+    lines.push("局_提交协议头 = ADD_协议头.获取协议头数据 ()");
+    lines.push("");
+  }
+
+  lines.push(
+    `局_结果 = 网页_访问_对象 (局_网址, 局_方式, ${isGet ? "" : "局_提交数据"}, , , ${headers.length > 0 ? "局_提交协议头" : ""}, , , , , , , , , , , )`,
+  );
+  lines.push("局_返回 = 到文本(编码_编码转换对象(局_结果))");
+  lines.push("返回 (局_返回)");
+
+  if (omittedReason != null) {
+    lines.push("");
+    lines.push(`' ${omittedReason}`);
+  }
+
+  return lines.join("\n");
+}
+
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", `'\"'\"'`)}'`;
 }
 
 function pythonString(value: string) {
   return JSON.stringify(value);
+}
+
+function isFormUrlencodedBody(
+  headers: Array<{ name: string; value: string }>,
+  bodyText: string | null,
+) {
+  if (bodyText == null || bodyText.trim() === "") {
+    return false;
+  }
+
+  const contentType =
+    headers.find((header) => header.name.toLowerCase() === "content-type")?.value.toLowerCase() ?? "";
+  if (!contentType.includes("application/x-www-form-urlencoded")) {
+    return false;
+  }
+
+  try {
+    const params = new URLSearchParams(bodyText);
+    return Array.from(params.keys()).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function eStringLiteral(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function eStringExpression(value: string) {
+  const escaped = value
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n")
+    .replaceAll('"', '"+#引号+"')
+    .replaceAll("\n", '"+#换行符+"');
+  return `"${escaped}"`;
 }

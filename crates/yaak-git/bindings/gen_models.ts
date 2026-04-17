@@ -10,7 +10,7 @@ export type Folder = { model: "folder", id: string, createdAt: string, updatedAt
 
 export type GrpcRequest = { model: "grpc_request", id: string, createdAt: string, updatedAt: string, workspaceId: string, folderId: string | null, authenticationType: string | null, authentication: Record<string, any>, description: string, message: string, metadata: Array<HttpRequestHeader>, method: string | null, name: string, service: string | null, sortPriority: number, url: string, };
 
-export type HttpRequest = { model: "http_request", id: string, createdAt: string, updatedAt: string, workspaceId: string, folderId: string | null, authentication: Record<string, any>, authenticationType: string | null, body: Record<string, any>, bodyType: string | null, description: string, headers: Array<HttpRequestHeader>, method: string, name: string, sortPriority: number, url: string, urlParameters: Array<HttpUrlParameter>, };
+export type HttpRequest = { model: "http_request", id: string, createdAt: string, updatedAt: string, workspaceId: string, folderId: string | null, authentication: Record<string, any>, authenticationType: string | null, body: Record<string, any>, bodyType: string | null, description: string, headers: Array<HttpRequestHeader>, method: string, name: string, proxy?: string | null, sortPriority: number, url: string, urlParameters: Array<HttpUrlParameter>, };
 
 export type HttpRequestHeader = { enabled?: boolean, name: string, value: string, id?: string, };
 

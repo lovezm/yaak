@@ -29,7 +29,7 @@ impl HttpConnectionManager {
 
     pub async fn get_client(&self, opt: &HttpConnectionOptions) -> Result<CachedClient> {
         let mut connections = self.connections.write().await;
-        let id = opt.id.clone();
+        let id = opt.cache_key();
 
         // Clean old connections
         connections.retain(|_, (_, last_used)| last_used.elapsed() <= self.ttl);

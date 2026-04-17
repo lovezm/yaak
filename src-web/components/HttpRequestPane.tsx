@@ -72,6 +72,7 @@ const TAB_PARAMS = "params";
 const TAB_HEADERS = "headers";
 const TAB_AUTH = "auth";
 const TAB_DESCRIPTION = "description";
+const TAB_PROXY = "proxy";
 const TABS_STORAGE_KEY = "http_request_tabs";
 
 const nonActiveRequestUrlsAtom = atom((get) => {
@@ -244,6 +245,10 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
       {
         value: TAB_DESCRIPTION,
         label: t("Info"),
+      },
+      {
+        value: TAB_PROXY,
+        label: t("Proxy"),
       },
     ],
     [
@@ -479,6 +484,29 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
                   forceUpdateKey={updateKey}
                   onChange={(description) => patchModel(activeRequest, { description })}
                 />
+              </div>
+            </TabContent>
+            <TabContent value={TAB_PROXY}>
+              <div className="grid grid-rows-[auto_auto] gap-3 h-full content-start">
+                <PlainInput
+                  label={t("Proxy")}
+                  forceUpdateKey={forceUpdateKey}
+                  defaultValue={activeRequest.proxy ?? ""}
+                  placeholder="user:pass@127.0.0.1:8080"
+                  help={t(
+                    "Supports IP:PORT, user:pass@IP:PORT, or user:pass:IP:PORT. If the value starts with http or https, it will be treated as a proxy API URL and fetched before the request is sent. Filled values only apply to this request.",
+                  )}
+                  onChange={(proxy) =>
+                    patchModel(activeRequest, { proxy: proxy.trim() === "" ? null : proxy.trim() })
+                  }
+                />
+                <div className="rounded-md border border-dashed border-border-subtle px-3 py-2 text-sm text-text-subtle">
+                  <div>{t("Available formats:")}</div>
+                  <div className="font-mono mt-1">127.0.0.1:8080</div>
+                  <div className="font-mono">user:pass@127.0.0.1:8080</div>
+                  <div className="font-mono">user:pass:127.0.0.1:8080</div>
+                  <div className="font-mono">http://proxy-api.example.com/getips?num=1</div>
+                </div>
               </div>
             </TabContent>
           </Tabs>

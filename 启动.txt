@@ -1,0 +1,3 @@
+安装依赖：npm install。DEVELOPMENT.md (line 27)
+做一次初始化构建：npm run bootstrap。DEVELOPMENT.md (line 33)
+启动开发模式：npm start。DEVELOPMENT.md (line 39)
