@@ -19,11 +19,6 @@ use url::Url;
 use yaak_api::get_system_proxy_url;
 
 use crate::error::Error::GenericError;
-use crate::is_dev;
-
-const MAX_UPDATE_CHECK_HOURS_STABLE: u64 = 12;
-const MAX_UPDATE_CHECK_HOURS_BETA: u64 = 3;
-const MAX_UPDATE_CHECK_HOURS_ALPHA: u64 = 1;
 
 // Create updater struct
 pub struct YaakUpdater {
@@ -171,31 +166,6 @@ impl YaakUpdater {
         };
 
         Ok(result)
-    }
-    pub async fn maybe_check<R: Runtime>(
-        &mut self,
-        window: &WebviewWindow<R>,
-        auto_download: bool,
-        mode: UpdateMode,
-    ) -> Result<bool> {
-        let update_period_seconds = match mode {
-            UpdateMode::Stable => MAX_UPDATE_CHECK_HOURS_STABLE,
-            UpdateMode::Beta => MAX_UPDATE_CHECK_HOURS_BETA,
-            UpdateMode::Alpha => MAX_UPDATE_CHECK_HOURS_ALPHA,
-        } * (60 * 60);
-
-        if let Some(i) = self.last_check
-            && i.elapsed().as_secs() < update_period_seconds
-        {
-            return Ok(false);
-        }
-
-        // Don't check if development (can still with manual user trigger)
-        if is_dev() {
-            return Ok(false);
-        }
-
-        self.check_now(window, mode, auto_download, UpdateTrigger::Background).await
     }
 }
 

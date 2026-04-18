@@ -30,7 +30,6 @@ use tauri_plugin_log::{Builder, Target, TargetKind, log};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 use tokio::sync::Mutex;
 use tokio::task::block_in_place;
-use tokio::time;
 use yaak_common::command::new_checked_command;
 use yaak_crypto::manager::EncryptionManager;
 use yaak_grpc::manager::{GrpcConfig, GrpcHandle};
@@ -127,7 +126,7 @@ async fn cmd_metadata(app_handle: AppHandle) -> YaakResult<AppMetaData> {
         vendored_plugin_dir: vendored_plugin_dir.to_string_lossy().to_string(),
         default_project_dir: default_project_dir.to_string_lossy().to_string(),
         feature_license: cfg!(feature = "license"),
-        feature_updater: cfg!(feature = "updater"),
+        feature_updater: false,
     })
 }
 
@@ -1765,29 +1764,7 @@ pub fn run() {
                         let _ = db.cancel_pending_websocket_connections();
                     });
                 }
-                RunEvent::WindowEvent { event: WindowEvent::Focused(true), label, .. } => {
-                    if cfg!(feature = "updater") {
-                        // Run update check whenever the window is focused
-                        let w = app_handle.get_webview_window(&label).unwrap();
-                        let h = app_handle.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let settings = w.db().get_settings();
-                            if settings.autoupdate {
-                                time::sleep(Duration::from_secs(3)).await; // Wait a bit so it's not so jarring
-                                let val: State<'_, Mutex<YaakUpdater>> = h.state();
-                                let update_mode = get_update_mode(&w).await.unwrap();
-                                if let Err(e) = val
-                                    .lock()
-                                    .await
-                                    .maybe_check(&w, settings.auto_download_updates, update_mode)
-                                    .await
-                                {
-                                    warn!("Failed to check for updates {e:?}");
-                                }
-                            };
-                        });
-                    }
-
+                RunEvent::WindowEvent { event: WindowEvent::Focused(true), .. } => {
                     let h = app_handle.clone();
                     tauri::async_runtime::spawn(async move {
                         let windows = h.webview_windows();

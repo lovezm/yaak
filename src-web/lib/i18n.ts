@@ -28,6 +28,7 @@ const zhCN: Record<string, string> = {
   Stable: "稳定版",
   "Beta (more frequent)": "测试版（更新更频繁）",
   "Check for updates": "检查更新",
+  "New version {version}": "有新版本 {version}",
   "Update Behavior": "更新方式",
   Automatic: "自动",
   Manual: "手动",

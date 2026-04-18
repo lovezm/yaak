@@ -12,7 +12,8 @@ concurrency:
 
 env:
   RELEASE_TAG: autobuild
-  RELEASE_NAME: Auto Build
+  RELEASE_VERSION: 0.0.${{ github.run_number }}
+  RELEASE_NAME: Yaak v0.0.${{ github.run_number }}
 
 jobs:
   build:
@@ -88,7 +89,7 @@ jobs:
       - name: Set build version
         run: npm run replace-version
         env:
-          YAAK_VERSION: 0.0.${{ github.run_number }}
+          YAAK_VERSION: ${{ env.RELEASE_VERSION }}
 
       - name: Build bundle
         run: npx tauri build --target ${{ matrix.rust_target }} --bundles ${{ matrix.bundle }} --config ./crates-tauri/yaak-app/tauri.conf.json
@@ -129,11 +130,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          notes=$'自动覆盖的最新构建产物。\n\n分支: '"$GITHUB_REF_NAME"$'\n提交: '"$GITHUB_SHA"$'\n触发: '"$GITHUB_WORKFLOW"$'\n时间(UTC): '"$(date -u '+%Y-%m-%d %H:%M:%S')" 
+          notes=$'自动覆盖的最新构建产物。\n\n版本: '"$RELEASE_VERSION"$'\n分支: '"$GITHUB_REF_NAME"$'\n提交: '"$GITHUB_SHA"$'\n触发: '"$GITHUB_WORKFLOW"$'\n时间(UTC): '"$(date -u '+%Y-%m-%d %H:%M:%S')" 
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --notes "$notes" --prerelease
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_NAME" --notes "$notes"
           else
-            gh release create "$RELEASE_TAG" --title "$RELEASE_NAME" --notes "$notes" --prerelease
+            gh release create "$RELEASE_TAG" --title "$RELEASE_NAME" --notes "$notes"
           fi
 
       - name: Remove old assets
