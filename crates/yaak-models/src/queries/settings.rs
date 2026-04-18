@@ -36,7 +36,7 @@ impl<'a> DbContext<'a> {
             theme_light: "yaak-light".to_string(),
             update_channel: "stable".to_string(),
             autoupdate: true,
-            colored_methods: false,
+            colored_methods: true,
             hide_license_badge: false,
             auto_download_updates: true,
             check_notifications: true,

@@ -231,7 +231,7 @@ async function showUpdateAvailableToast(updateInfo: UpdateInfo) {
           variant="border"
           rightSlot={<Icon icon="external_link" />}
           onClick={async () => {
-            await openUrl(`https://yaak.app/changelog/${version}`);
+            await openUrl("https://github.com/lovezm/yaak/releases");
           }}
         >
           What&apos;s New

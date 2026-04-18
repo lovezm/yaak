@@ -1,6 +1,7 @@
 import { readDir } from "@tauri-apps/plugin-fs";
 import { useState } from "react";
 import { openWorkspaceFromSyncDir } from "../commands/openWorkspaceFromSyncDir";
+import { t } from "../lib/i18n";
 import { Banner } from "./core/Banner";
 import { Button } from "./core/Button";
 import { Checkbox } from "./core/Checkbox";
@@ -23,7 +24,7 @@ export function SyncToFilesystemSetting({
     <VStack className="w-full my-2" space={3}>
       {syncDir && (
         <Banner color="notice" className="flex flex-col gap-1.5">
-          <p>Directory is not empty. Do you want to open it instead?</p>
+          <p>{t("Directory is not empty. Do you want to open it instead?")}</p>
           <div>
             <Button
               variant="border"
@@ -35,7 +36,7 @@ export function SyncToFilesystemSetting({
                 onCreateNewWorkspace();
               }}
             >
-              Open Workspace
+              {t("Open Workspace")}
             </Button>
           </div>
         </Banner>
@@ -43,10 +44,10 @@ export function SyncToFilesystemSetting({
 
       <SelectFile
         directory
-        label="Local directory sync"
+        label={t("Local directory sync")}
         size="xs"
-        noun="Directory"
-        help="Sync data to a folder for backup and Git integration."
+        noun={t("Directory")}
+        help={t("Sync data to a folder for backup and Git integration.")}
         filePath={value.filePath}
         onChange={async ({ filePath }) => {
           if (filePath != null) {
@@ -66,7 +67,7 @@ export function SyncToFilesystemSetting({
         <Checkbox
           checked={value.initGit}
           onChange={(initGit) => onChange({ ...value, initGit })}
-          title="Initialize Git Repo"
+          title={t("Initialize Git Repo")}
         />
       )}
     </VStack>

@@ -153,7 +153,7 @@ interface HotkeyRowProps {
 
 function HotkeyRow({ action, currentKeys, defaultKeys, onSave, onReset }: HotkeyRowProps) {
   const label = useHotkeyLabel(action);
-  const scope = capitalize(getHotkeyScope(action).replace(/_/g, " "));
+  const scope = t(capitalize(getHotkeyScope(action).replace(/_/g, " ")));
   const isCustomized = !arraysEqual(currentKeys, defaultKeys);
   const isDisabled = currentKeys.length === 0;
 

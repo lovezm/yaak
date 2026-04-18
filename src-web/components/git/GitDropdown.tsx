@@ -1,5 +1,6 @@
 import { useGit } from "@yaakapp-internal/git";
 import type { WorkspaceMeta } from "@yaakapp-internal/models";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import classNames from "classnames";
 import { useAtomValue } from "jotai";
 import type { HTMLAttributes } from "react";
@@ -575,6 +576,12 @@ function SetupSyncDropdown({ workspaceMeta }: { workspaceMeta: WorkspaceMeta }) 
           label: t("Open Workspace Settings"),
           leftSlot: <Icon icon="settings" />,
           onSelect: () => openWorkspaceSettings("data"),
+        },
+        {
+          label: t("GitHub Sync Guide"),
+          leftSlot: <Icon icon="book_open_text" />,
+          rightSlot: <Icon icon="external_link" color="secondary" />,
+          onSelect: () => openUrl("https://9yo.cc/index.php/archives/12/"),
         },
         { type: "separator" },
         {

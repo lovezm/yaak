@@ -13,6 +13,7 @@ import { Icon } from "../core/Icon";
 import { HStack } from "../core/Stacks";
 import { TabContent, type TabItem, Tabs } from "../core/Tabs/Tabs";
 import { HeaderSize } from "../HeaderSize";
+import { SettingsAbout } from "./SettingsAbout";
 import { SettingsCertificates } from "./SettingsCertificates";
 import { SettingsGeneral } from "./SettingsGeneral";
 import { SettingsHotkeys } from "./SettingsHotkeys";
@@ -34,6 +35,7 @@ const TAB_PROXY = "proxy";
 const TAB_CERTIFICATES = "certificates";
 const TAB_PLUGINS = "plugins";
 const TAB_LICENSE = "license";
+const TAB_ABOUT = "about";
 const tabs = [
   TAB_GENERAL,
   TAB_THEME,
@@ -42,6 +44,7 @@ const tabs = [
   TAB_PLUGINS,
   TAB_CERTIFICATES,
   TAB_PROXY,
+  TAB_ABOUT,
   TAB_LICENSE,
 ] as const;
 export type SettingsTab = (typeof tabs)[number];
@@ -54,6 +57,7 @@ const tabLabels: Record<SettingsTab, string> = {
   plugins: t("Plugins"),
   certificates: t("Certificates"),
   proxy: t("Proxy"),
+  about: t("About"),
   license: t("License"),
 };
 
@@ -128,6 +132,8 @@ export default function Settings({ hide }: Props) {
                 <Icon icon="puzzle" className="text-secondary" />
               ) : value === TAB_LICENSE ? (
                 <Icon icon="key_round" className="text-secondary" />
+              ) : value === TAB_ABOUT ? (
+                <Icon icon="info" className="text-secondary" />
               ) : null,
             rightSlot:
               value === TAB_CERTIFICATES ? (
@@ -162,6 +168,9 @@ export default function Settings({ hide }: Props) {
         </TabContent>
         <TabContent value={TAB_CERTIFICATES} className="overflow-y-auto h-full px-6 !py-4">
           <SettingsCertificates />
+        </TabContent>
+        <TabContent value={TAB_ABOUT} className="overflow-y-auto h-full px-6 !py-4">
+          <SettingsAbout />
         </TabContent>
         <TabContent value={TAB_LICENSE} className="overflow-y-auto h-full px-6 !py-4">
           <SettingsLicense />

@@ -1,14 +1,17 @@
 import { patchModel, workspaceMetasAtom, workspacesAtom } from "@yaakapp-internal/models";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAtomValue } from "jotai";
 import { useAuthTab } from "../hooks/useAuthTab";
 import { useHeadersTab } from "../hooks/useHeadersTab";
 import { useInheritedHeaders } from "../hooks/useInheritedHeaders";
 import { deleteModelWithConfirm } from "../lib/deleteModelWithConfirm";
+import { t } from "../lib/i18n";
 import { router } from "../lib/router";
 import { CopyIconButton } from "./CopyIconButton";
 import { Banner } from "./core/Banner";
 import { Button } from "./core/Button";
 import { CountBadge } from "./core/CountBadge";
+import { Icon } from "./core/Icon";
 import { InlineCode } from "./core/InlineCode";
 import { PlainInput } from "./core/PlainInput";
 import { HStack, VStack } from "./core/Stacks";
@@ -66,21 +69,21 @@ export function WorkspaceSettingsDialog({ workspaceId, hide, tab }: Props) {
   return (
     <Tabs
       defaultValue={tab ?? DEFAULT_TAB}
-      label="Folder Settings"
+      label={t("Workspace Settings")}
       className="pt-4 pb-2 px-3"
       tabListClassName="pl-4"
       addBorders
       tabs={[
-        { value: TAB_GENERAL, label: "Workspace" },
+        { value: TAB_GENERAL, label: t("Workspace") },
         {
           value: TAB_DATA,
-          label: "Storage",
+          label: t("Storage"),
         },
         ...headersTab,
         ...authTab,
         {
           value: TAB_DNS,
-          label: "DNS",
+          label: t("DNS"),
           rightSlot:
             workspace.settingDnsOverrides.length > 0 ? (
               <CountBadge count={workspace.settingDnsOverrides.length} />
@@ -162,6 +165,16 @@ export function WorkspaceSettingsDialog({ workspaceId, hide, tab }: Props) {
             onChange={({ filePath }) => patchModel(workspaceMeta, { settingSyncDir: filePath })}
           />
           <WorkspaceEncryptionSetting size="xs" />
+          <Button
+            size="xs"
+            variant="border"
+            color="secondary"
+            leftSlot={<Icon icon="book_open_text" />}
+            rightSlot={<Icon icon="external_link" color="secondary" />}
+            onClick={() => openUrl("https://9yo.cc/index.php/archives/12/")}
+          >
+            {t("GitHub Sync Guide")}
+          </Button>
         </VStack>
       </TabContent>
       <TabContent value={TAB_DNS} className="overflow-y-auto h-full px-4">

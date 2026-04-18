@@ -80,23 +80,28 @@ export function SettingsDropdown() {
           onSelect: () => openUrl("https://yaak.app/pricing"),
         },
         {
-          label: t("Install CLI"),
+          label: t("Ergou Blog"),
           hidden: appInfo.cliVersion != null,
           leftSlot: <Icon icon="square_terminal" />,
           rightSlot: <Icon icon="external_link" color="secondary" />,
-          onSelect: () => openUrl("https://yaak.app/docs/cli"),
+          onSelect: () => openUrl("https://9yo.cc"),
         },
         {
           label: t("Feedback"),
           leftSlot: <Icon icon="chat" />,
           rightSlot: <Icon icon="external_link" color="secondary" />,
-          onSelect: () => openUrl("https://yaak.app/feedback"),
+          onSelect: () => openUrl("https://github.com/lovezm/yaak/issues"),
         },
         {
           label: t("Changelog"),
           leftSlot: <Icon icon="cake" />,
           rightSlot: <Icon icon="external_link" color="secondary" />,
-          onSelect: () => openUrl(`https://yaak.app/changelog/${appInfo.version}`),
+          onSelect: () => openUrl("https://github.com/lovezm/yaak/releases"),
+        },
+        {
+          label: t("About"),
+          leftSlot: <Icon icon="info" />,
+          onSelect: () => openSettings.mutate("about"),
         },
       ]}
     >

@@ -1,12 +1,13 @@
-# 加密 Key 入口与弹窗汉化计划
+# GitHub 同步教程入口与工作区设置汉化计划
 
-- [x] 定位加密 key 入口和弹窗里的未汉化文案
-- [x] 为加密入口按钮与弹窗接入中文文案
-- [x] 更新任务记录与 lessons，并跑前端校验
+- [x] 定位左下角同步提示、工作区设置页和工作区加密区域的相关组件
+- [x] 新增 GitHub 同步使用教程入口并补齐相关汉化
+- [x] 更新任务记录与 lessons，并运行前端校验
 
 ## Review
 
-- 已确认未汉化文案集中在 `WorkspaceHeader`、`setupOrConfigureEncryption`、`WorkspaceEncryptionSetting` 和 `EncryptionHelp`，包含顶部 `Enter Encryption Key`、弹窗标题、说明、输入框标签、按钮和忘记 key 的确认提示
-- 已在 `WorkspaceHeader.tsx`、`setupOrConfigureEncryption.tsx`、`WorkspaceEncryptionSetting.tsx` 和 `EncryptionHelp.tsx` 中把加密入口按钮、弹窗标题、说明文案、输入标签、确认按钮、忘记 key 提示、复制/显示密钥提示统一接入 `t(...)`
-- 已在 `i18n.ts` 中补齐 `Enter Encryption Key`、`Workspace Encryption`、`Workspace encryption key`、`Forgot your key?`、`Enable Encryption`、`Disable Encryption` 等中文词条
+- 已在左下角“设置文件同步或 Git”提示中新增 `GitHub 同步使用教程` 入口，跳转到 `https://9yo.cc/index.php/archives/12/`
+- 已把工作区设置页顶部的 `Workspace`、`Storage` 等标签接入中文显示
+- 已在工作区设置的数据页中，于“工作区加密”区域下方新增同一教程入口
+- 已把同步设置里直接可见的英文控件一并补齐，包括本地目录同步、选择文件夹、未选择目录、打开工作区等
 - 前端校验通过：`npm run --workspace src-web lint`
