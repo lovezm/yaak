@@ -8,7 +8,6 @@ use crate::import::import_data;
 use crate::models_ext::{BlobManagerExt, QueryManagerExt};
 use crate::notifications::YaakNotifier;
 use crate::render::{render_grpc_request, render_json_value, render_template};
-use crate::updates::{UpdateMode, UpdateTrigger, YaakUpdater};
 use crate::uri_scheme::handle_deep_link;
 use error::Result as YaakResult;
 use eventsource_client::{EventParser, SSE};
@@ -76,7 +75,6 @@ mod plugin_events;
 mod plugins_ext;
 mod render;
 mod sync_ext;
-mod updates;
 mod uri_scheme;
 mod window;
 mod window_menu;
@@ -1471,20 +1469,6 @@ async fn cmd_new_main_window(app_handle: AppHandle, url: &str) -> YaakResult<()>
     Ok(())
 }
 
-#[tauri::command]
-async fn cmd_check_for_updates<R: Runtime>(
-    window: WebviewWindow<R>,
-    yaak_updater: State<'_, Mutex<YaakUpdater>>,
-) -> YaakResult<bool> {
-    let update_mode = get_update_mode(&window).await?;
-    let settings = window.db().get_settings();
-    Ok(yaak_updater
-        .lock()
-        .await
-        .check_now(&window, update_mode, settings.auto_download_updates, UpdateTrigger::User)
-        .await?)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default().plugin(
@@ -1553,11 +1537,6 @@ pub fn run() {
         builder = builder.plugin(yaak_license::init());
     }
 
-    #[cfg(feature = "updater")]
-    {
-        builder = builder.plugin(tauri_plugin_updater::Builder::default().build());
-    }
-
     builder
         .setup(|app| {
             // Initialize HTTP connection manager
@@ -1596,10 +1575,6 @@ pub fn run() {
                 });
             };
 
-            // Add updater
-            let yaak_updater = YaakUpdater::new();
-            app.manage(Mutex::new(yaak_updater));
-
             // Add notifier
             let yaak_notifier = YaakNotifier::new();
             app.manage(Mutex::new(yaak_notifier));
@@ -1637,7 +1612,6 @@ pub fn run() {
             cmd_call_workspace_action,
             cmd_call_folder_action,
             cmd_call_grpc_request_action,
-            cmd_check_for_updates,
             cmd_curl_to_request,
             cmd_delete_all_grpc_connections,
             cmd_delete_all_http_responses,
@@ -1787,11 +1761,6 @@ pub fn run() {
                 _ => {}
             };
         });
-}
-
-async fn get_update_mode<R: Runtime>(window: &WebviewWindow<R>) -> YaakResult<UpdateMode> {
-    let settings = window.db().get_settings();
-    Ok(UpdateMode::new(settings.update_channel.as_str()))
 }
 
 fn safe_uri(endpoint: &str) -> String {

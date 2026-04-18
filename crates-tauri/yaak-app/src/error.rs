@@ -44,9 +44,6 @@ pub enum Error {
     #[error(transparent)]
     OpenerError(#[from] tauri_plugin_opener::Error),
 
-    #[error("Updater error: {0}")]
-    UpdaterError(#[from] tauri_plugin_updater::Error),
-
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::error::Error),
 

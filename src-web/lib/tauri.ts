@@ -8,7 +8,6 @@ type TauriCmd =
   | "cmd_call_websocket_request_action"
   | "cmd_call_workspace_action"
   | "cmd_call_folder_action"
-  | "cmd_check_for_updates"
   | "cmd_curl_to_request"
   | "cmd_decrypt_template"
   | "cmd_default_headers"
