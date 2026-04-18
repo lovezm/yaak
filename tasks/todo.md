@@ -1,13 +1,12 @@
-# GitHub 同步教程入口与工作区设置汉化计划
+# Actions 打包提速优化计划
 
-- [x] 定位左下角同步提示、工作区设置页和工作区加密区域的相关组件
-- [x] 新增 GitHub 同步使用教程入口并补齐相关汉化
-- [x] 更新任务记录与 lessons，并运行前端校验
+- [x] 调整 release workflow，移除重复 bootstrap 并增加 vendored/wasm-pack 缓存
+- [x] 更新任务记录
+- [x] 校验 workflow 语法与变更结果
 
 ## Review
 
-- 已在左下角“设置文件同步或 Git”提示中新增 `GitHub 同步使用教程` 入口，跳转到 `https://9yo.cc/index.php/archives/12/`
-- 已把工作区设置页顶部的 `Workspace`、`Storage` 等标签接入中文显示
-- 已在工作区设置的数据页中，于“工作区加密”区域下方新增同一教程入口
-- 已把同步设置里直接可见的英文控件一并补齐，包括本地目录同步、选择文件夹、未选择目录、打开工作区等
-- 前端校验通过：`npm run --workspace src-web lint`
+- 已移除工作流里显式的 `npm run bootstrap`，避免与 `tauri.conf.json` 里的 `beforeBuildCommand` 重复执行
+- 已为 `wasm-pack` 增加缓存，减少干净 runner 上重复安装开销
+- 已为 `vendored/node`、`vendored/protoc`、`vendored/plugins`、`vendored/plugin-runtime` 增加缓存，减少每次打包时的重复下载与拷贝
+- 已用 `ruby` 解析 workflow，确认 `.github/workflows/release-fork-overwrite.yml` 的 YAML 语法有效
