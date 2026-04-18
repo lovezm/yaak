@@ -4,6 +4,7 @@ import { memo } from "react";
 import { activeWorkspaceAtom, activeWorkspaceMetaAtom } from "../hooks/useActiveWorkspace";
 import { useToggleCommandPalette } from "../hooks/useToggleCommandPalette";
 import { workspaceLayoutAtom } from "../lib/atoms";
+import { t } from "../lib/i18n";
 import { setupOrConfigureEncryption } from "../lib/setupOrConfigureEncryption";
 import { CookieDropdown } from "./CookieDropdown";
 import { Icon } from "./core/Icon";
@@ -56,7 +57,7 @@ export const WorkspaceHeader = memo(function WorkspaceHeader({ className }: Prop
         <ImportCurlButton />
         {showEncryptionSetup ? (
           <PillButton color="danger" onClick={setupOrConfigureEncryption}>
-            Enter Encryption Key
+            {t("Enter Encryption Key")}
           </PillButton>
         ) : (
           <LicenseBadge />

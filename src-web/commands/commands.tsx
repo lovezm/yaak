@@ -15,8 +15,8 @@ import {
 import { activeWorkspaceIdAtom } from "../hooks/useActiveWorkspace";
 import { createFastMutation } from "../hooks/useFastMutation";
 import { showDialog } from "../lib/dialog";
+import { t } from "../lib/i18n";
 import { jotaiStore } from "../lib/jotai";
-import { pluralizeCount } from "../lib/pluralize";
 import { showPrompt } from "../lib/prompt";
 import { resolvedModelNameWithFolders } from "../lib/resolvedModelName";
 
@@ -86,7 +86,7 @@ export const syncWorkspace = createFastMutation<
 
     showDialog({
       id: "commit-sync",
-      title: "Changes Detected",
+      title: t("Changes Detected"),
       size: "md",
       render: ({ hide }) => (
         <form
@@ -99,21 +99,22 @@ export const syncWorkspace = createFastMutation<
         >
           {isDeletingWorkspace ? (
             <Banner color="danger">
-              🚨 <strong>Changes contain a workspace deletion!</strong>
+              🚨 <strong>{t("Changes contain a workspace deletion!")}</strong>
             </Banner>
           ) : (
             <span />
           )}
           <p>
-            {pluralizeCount("file", dbOps.length)} in the directory{" "}
-            {dbOps.length === 1 ? "has" : "have"} changed. Do you want to update your workspace?
+            {t("{count} files in the directory have changed. Do you want to update your workspace?", {
+              count: dbOps.length,
+            })}
           </p>
           <Table scrollable className="my-4">
             <TableHead>
               <TableRow>
-                <TableHeaderCell>Type</TableHeaderCell>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Operation</TableHeaderCell>
+                <TableHeaderCell>{t("Type")}</TableHeaderCell>
+                <TableHeaderCell>{t("Name")}</TableHeaderCell>
+                <TableHeaderCell>{t("Operation")}</TableHeaderCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -124,20 +125,20 @@ export const syncWorkspace = createFastMutation<
                 let model: string;
 
                 if (op.type === "dbCreate") {
-                  label = "create";
+                  label = t("create");
                   name = resolvedModelNameWithFolders(op.fs.model);
                   color = "text-success";
-                  model = modelTypeLabel(op.fs.model);
+                  model = t(modelTypeLabel(op.fs.model));
                 } else if (op.type === "dbUpdate") {
-                  label = "update";
+                  label = t("update");
                   name = resolvedModelNameWithFolders(op.fs.model);
                   color = "text-info";
-                  model = modelTypeLabel(op.fs.model);
+                  model = t(modelTypeLabel(op.fs.model));
                 } else if (op.type === "dbDelete") {
-                  label = "delete";
+                  label = t("delete");
                   name = resolvedModelNameWithFolders(op.model);
                   color = "text-danger";
-                  model = modelTypeLabel(op.model);
+                  model = t(modelTypeLabel(op.model));
                 } else {
                   return null;
                 }
@@ -157,10 +158,10 @@ export const syncWorkspace = createFastMutation<
           </Table>
           <footer className="py-3 flex flex-row-reverse items-center gap-3">
             <Button type="submit" color="primary">
-              Apply Changes
+              {t("Apply Changes")}
             </Button>
             <Button onClick={hide} color="secondary">
-              Cancel
+              {t("Cancel")}
             </Button>
           </footer>
         </form>

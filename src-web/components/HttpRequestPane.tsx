@@ -37,6 +37,7 @@ import { showToast } from "../lib/toast";
 import { t } from "../lib/i18n";
 import { BinaryFileEditor } from "./BinaryFileEditor";
 import { ConfirmLargeRequestBody } from "./ConfirmLargeRequestBody";
+import { Button } from "./core/Button";
 import { Checkbox } from "./core/Checkbox";
 import { CountBadge } from "./core/CountBadge";
 import type { GenericCompletionConfig } from "./core/Editor/genericCompletion";
@@ -76,6 +77,17 @@ const TAB_DESCRIPTION = "description";
 const TAB_PROXY = "proxy";
 const TAB_REDIRECT = "redirect";
 const TABS_STORAGE_KEY = "http_request_tabs";
+
+const BODY_TYPE_TABS = [
+  { label: "none", value: BODY_TYPE_NONE },
+  { label: "form-data", value: BODY_TYPE_FORM_MULTIPART },
+  { label: "x-www-form-urlencoded", value: BODY_TYPE_FORM_URLENCODED },
+  { label: "JSON", value: BODY_TYPE_JSON },
+  { label: "XML", value: BODY_TYPE_XML },
+  { label: "Text", value: BODY_TYPE_OTHER },
+  { label: "Binary", value: BODY_TYPE_BINARY },
+  { label: "GraphQL", value: BODY_TYPE_GRAPHQL },
+] as const;
 
 const nonActiveRequestUrlsAtom = atom((get) => {
   const activeRequestId = get(activeRequestIdAtom);
@@ -164,78 +176,62 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
       : 0;
   }
 
+  const handleBodyTypeChange = useCallback(
+    async (bodyType: string | null) => {
+      if (bodyType === activeRequest.bodyType) return;
+
+      const showMethodToast = (newMethod: string) => {
+        if (activeRequest.method.toLowerCase() === newMethod.toLowerCase()) return;
+        showToast({
+          id: "switched-method",
+          message: (
+            <>
+              Request method switched to <InlineCode>POST</InlineCode>
+            </>
+          ),
+        });
+      };
+
+      const patch: Partial<HttpRequest> = { bodyType };
+      let newContentType: string | null | undefined;
+      if (bodyType === BODY_TYPE_NONE) {
+        newContentType = null;
+      } else if (
+        bodyType === BODY_TYPE_FORM_URLENCODED ||
+        bodyType === BODY_TYPE_FORM_MULTIPART ||
+        bodyType === BODY_TYPE_JSON ||
+        bodyType === BODY_TYPE_OTHER ||
+        bodyType === BODY_TYPE_XML
+      ) {
+        const isDefaultishRequest =
+          activeRequest.bodyType === BODY_TYPE_NONE && activeRequest.method.toLowerCase() === "get";
+        const requiresPost = bodyType === BODY_TYPE_FORM_MULTIPART;
+        if (isDefaultishRequest || requiresPost) {
+          patch.method = "POST";
+          showMethodToast(patch.method);
+        }
+        newContentType = bodyType === BODY_TYPE_OTHER ? "text/plain" : bodyType;
+      } else if (bodyType === BODY_TYPE_GRAPHQL) {
+        patch.method = "POST";
+        newContentType = "application/json";
+        showMethodToast(patch.method);
+      }
+
+      if (newContentType !== undefined) {
+        await handleContentTypeChange(newContentType, patch);
+      } else {
+        await patchModel(activeRequest, patch);
+      }
+    },
+    [activeRequest, handleContentTypeChange],
+  );
+
   const tabs = useMemo<TabItem[]>(
     () => [
       {
         value: TAB_BODY,
         rightSlot: numParams > 0 ? <CountBadge count={numParams} /> : null,
-        options: {
-          value: activeRequest.bodyType,
-          items: [
-            { type: "separator", label: "Form Data" },
-            { label: "Url Encoded", value: BODY_TYPE_FORM_URLENCODED },
-            { label: "Multi-Part", value: BODY_TYPE_FORM_MULTIPART },
-            { type: "separator", label: "Text Content" },
-            { label: "GraphQL", value: BODY_TYPE_GRAPHQL },
-            { label: "JSON", value: BODY_TYPE_JSON },
-            { label: "XML", value: BODY_TYPE_XML },
-            {
-              label: "Other",
-              value: BODY_TYPE_OTHER,
-              shortLabel: nameOfContentTypeOr(contentType, "Other"),
-            },
-            { type: "separator", label: "Other" },
-            { label: "Binary File", value: BODY_TYPE_BINARY },
-            { label: "No Body", shortLabel: t("Body"), value: BODY_TYPE_NONE },
-          ],
-          onChange: async (bodyType) => {
-            if (bodyType === activeRequest.bodyType) return;
-
-            const showMethodToast = (newMethod: string) => {
-              if (activeRequest.method.toLowerCase() === newMethod.toLowerCase()) return;
-              showToast({
-                id: "switched-method",
-                message: (
-                  <>
-                    Request method switched to <InlineCode>POST</InlineCode>
-                  </>
-                ),
-              });
-            };
-
-            const patch: Partial<HttpRequest> = { bodyType };
-            let newContentType: string | null | undefined;
-            if (bodyType === BODY_TYPE_NONE) {
-              newContentType = null;
-            } else if (
-              bodyType === BODY_TYPE_FORM_URLENCODED ||
-              bodyType === BODY_TYPE_FORM_MULTIPART ||
-              bodyType === BODY_TYPE_JSON ||
-              bodyType === BODY_TYPE_OTHER ||
-              bodyType === BODY_TYPE_XML
-            ) {
-              const isDefaultishRequest =
-                activeRequest.bodyType === BODY_TYPE_NONE &&
-                activeRequest.method.toLowerCase() === "get";
-              const requiresPost = bodyType === BODY_TYPE_FORM_MULTIPART;
-              if (isDefaultishRequest || requiresPost) {
-                patch.method = "POST";
-                showMethodToast(patch.method);
-              }
-              newContentType = bodyType === BODY_TYPE_OTHER ? "text/plain" : bodyType;
-            } else if (bodyType === BODY_TYPE_GRAPHQL) {
-              patch.method = "POST";
-              newContentType = "application/json";
-              showMethodToast(patch.method);
-            }
-
-            if (newContentType !== undefined) {
-              await handleContentTypeChange(newContentType, patch);
-            } else {
-              await patchModel(activeRequest, patch);
-            }
-          },
-        },
+        label: t("Body"),
       },
       {
         value: TAB_PARAMS,
@@ -258,10 +254,7 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
       },
     ],
     [
-      activeRequest,
       authTab,
-      contentType,
-      handleContentTypeChange,
       headersTab,
       numParams,
       urlParameterPairs.length,
@@ -405,70 +398,94 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
               />
             </TabContent>
             <TabContent value={TAB_BODY}>
-              <ConfirmLargeRequestBody request={activeRequest}>
-                {activeRequest.bodyType === BODY_TYPE_JSON ? (
-                  <JsonBodyEditor
-                    forceUpdateKey={forceUpdateKey}
-                    heightMode={fullHeight ? "full" : "auto"}
-                    request={activeRequest}
-                  />
-                ) : activeRequest.bodyType === BODY_TYPE_XML ? (
-                  <Editor
-                    forceUpdateKey={forceUpdateKey}
-                    autocompleteFunctions
-                    autocompleteVariables
-                    placeholder="..."
-                    heightMode={fullHeight ? "full" : "auto"}
-                    defaultValue={`${activeRequest.body?.text ?? ""}`}
-                    language="xml"
-                    onChange={handleBodyTextChange}
-                    stateKey={`xml.${activeRequest.id}`}
-                  />
-                ) : activeRequest.bodyType === BODY_TYPE_GRAPHQL ? (
-                  <Suspense>
-                    <GraphQLEditor
+              <div className="grid grid-rows-[auto_minmax(0,1fr)] h-full gap-3">
+                <div className="rounded-md border border-border-subtle bg-surface p-2">
+                  <div className="text-xs uppercase tracking-wide text-text-subtle mb-2">
+                    {t("Body")}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {BODY_TYPE_TABS.map((option) => {
+                      const isActive = activeRequest.bodyType === option.value;
+                      return (
+                        <Button
+                          key={option.value}
+                          size="sm"
+                          variant={isActive ? "solid" : "border"}
+                          color={isActive ? "secondary" : undefined}
+                          className={isActive ? "!text-text" : undefined}
+                          onClick={() => void handleBodyTypeChange(option.value)}
+                        >
+                          {option.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <ConfirmLargeRequestBody request={activeRequest}>
+                  {activeRequest.bodyType === BODY_TYPE_JSON ? (
+                    <JsonBodyEditor
                       forceUpdateKey={forceUpdateKey}
-                      baseRequest={activeRequest}
+                      heightMode={fullHeight ? "full" : "auto"}
+                      request={activeRequest}
+                    />
+                  ) : activeRequest.bodyType === BODY_TYPE_XML ? (
+                    <Editor
+                      forceUpdateKey={forceUpdateKey}
+                      autocompleteFunctions
+                      autocompleteVariables
+                      placeholder="..."
+                      heightMode={fullHeight ? "full" : "auto"}
+                      defaultValue={`${activeRequest.body?.text ?? ""}`}
+                      language="xml"
+                      onChange={handleBodyTextChange}
+                      stateKey={`xml.${activeRequest.id}`}
+                    />
+                  ) : activeRequest.bodyType === BODY_TYPE_GRAPHQL ? (
+                    <Suspense>
+                      <GraphQLEditor
+                        forceUpdateKey={forceUpdateKey}
+                        baseRequest={activeRequest}
+                        request={activeRequest}
+                        onChange={handleBodyChange}
+                      />
+                    </Suspense>
+                  ) : activeRequest.bodyType === BODY_TYPE_FORM_URLENCODED ? (
+                    <FormUrlencodedEditor
+                      forceUpdateKey={forceUpdateKey}
                       request={activeRequest}
                       onChange={handleBodyChange}
                     />
-                  </Suspense>
-                ) : activeRequest.bodyType === BODY_TYPE_FORM_URLENCODED ? (
-                  <FormUrlencodedEditor
-                    forceUpdateKey={forceUpdateKey}
-                    request={activeRequest}
-                    onChange={handleBodyChange}
-                  />
-                ) : activeRequest.bodyType === BODY_TYPE_FORM_MULTIPART ? (
-                  <FormMultipartEditor
-                    forceUpdateKey={forceUpdateKey}
-                    request={activeRequest}
-                    onChange={handleBodyChange}
-                  />
-                ) : activeRequest.bodyType === BODY_TYPE_BINARY ? (
-                  <BinaryFileEditor
-                    requestId={activeRequest.id}
-                    contentType={contentType}
-                    body={activeRequest.body}
-                    onChange={(body) => patchModel(activeRequest, { body })}
-                    onChangeContentType={handleContentTypeChange}
-                  />
-                ) : typeof activeRequest.bodyType === "string" ? (
-                  <Editor
-                    forceUpdateKey={forceUpdateKey}
-                    autocompleteFunctions
-                    autocompleteVariables
-                    language={languageFromContentType(contentType)}
-                    placeholder="..."
-                    heightMode={fullHeight ? "full" : "auto"}
-                    defaultValue={`${activeRequest.body?.text ?? ""}`}
-                    onChange={handleBodyTextChange}
-                    stateKey={`other.${activeRequest.id}`}
-                  />
-                ) : (
-                  <EmptyStateText>No Body</EmptyStateText>
-                )}
-              </ConfirmLargeRequestBody>
+                  ) : activeRequest.bodyType === BODY_TYPE_FORM_MULTIPART ? (
+                    <FormMultipartEditor
+                      forceUpdateKey={forceUpdateKey}
+                      request={activeRequest}
+                      onChange={handleBodyChange}
+                    />
+                  ) : activeRequest.bodyType === BODY_TYPE_BINARY ? (
+                    <BinaryFileEditor
+                      requestId={activeRequest.id}
+                      contentType={contentType}
+                      body={activeRequest.body}
+                      onChange={(body) => patchModel(activeRequest, { body })}
+                      onChangeContentType={handleContentTypeChange}
+                    />
+                  ) : typeof activeRequest.bodyType === "string" ? (
+                    <Editor
+                      forceUpdateKey={forceUpdateKey}
+                      autocompleteFunctions
+                      autocompleteVariables
+                      language={languageFromContentType(contentType)}
+                      placeholder="..."
+                      heightMode={fullHeight ? "full" : "auto"}
+                      defaultValue={`${activeRequest.body?.text ?? ""}`}
+                      onChange={handleBodyTextChange}
+                      stateKey={`other.${activeRequest.id}`}
+                    />
+                  ) : (
+                    <EmptyStateText>No Body</EmptyStateText>
+                  )}
+                </ConfirmLargeRequestBody>
+              </div>
             </TabContent>
             <TabContent value={TAB_DESCRIPTION}>
               <div className="grid grid-rows-[auto_minmax(0,1fr)] h-full">
@@ -536,12 +553,4 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
       )}
     </div>
   );
-}
-
-function nameOfContentTypeOr(contentType: string | null, fallback: string) {
-  const language = languageFromContentType(contentType);
-  if (language === "markdown") {
-    return "Markdown";
-  }
-  return fallback;
 }

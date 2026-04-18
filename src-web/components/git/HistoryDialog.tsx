@@ -1,5 +1,6 @@
 import type { GitCommit } from "@yaakapp-internal/git";
 import { formatDistanceToNowStrict } from "date-fns";
+import { t } from "../../lib/i18n";
 import {
   Table,
   TableBody,
@@ -20,9 +21,9 @@ export function HistoryDialog({ log }: Props) {
       <Table scrollable className="px-1">
         <TableHead>
           <TableRow>
-            <TableHeaderCell>Message</TableHeaderCell>
-            <TableHeaderCell>Author</TableHeaderCell>
-            <TableHeaderCell>When</TableHeaderCell>
+            <TableHeaderCell>{t("Message")}</TableHeaderCell>
+            <TableHeaderCell>{t("Author")}</TableHeaderCell>
+            <TableHeaderCell>{t("When")}</TableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -31,13 +32,15 @@ export function HistoryDialog({ log }: Props) {
               key={(l.author.name ?? "") + (l.author.email ?? "") + (l.message ?? "n/a") + l.when}
             >
               <TruncatedWideTableCell>
-                {l.message || <em className="text-text-subtle">No message</em>}
+                {l.message || <em className="text-text-subtle">{t("No message")}</em>}
               </TruncatedWideTableCell>
               <TableCell>
-                <span title={`Email: ${l.author.email}`}>{l.author.name || "Unknown"}</span>
+                <span title={`${t("Email")}: ${l.author.email}`}>{l.author.name || t("Unknown")}</span>
               </TableCell>
               <TableCell className="text-text-subtle">
-                <span title={l.when}>{formatDistanceToNowStrict(l.when)} ago</span>
+                <span title={l.when}>
+                  {formatDistanceToNowStrict(l.when)} {t("ago")}
+                </span>
               </TableCell>
             </TableRow>
           ))}

@@ -12,6 +12,7 @@ import { activeWorkspaceAtom, activeWorkspaceMetaAtom } from "../hooks/useActive
 import { createFastMutation } from "../hooks/useFastMutation";
 import { useStateWithDeps } from "../hooks/useStateWithDeps";
 import { showConfirm } from "../lib/confirm";
+import { t } from "../lib/i18n";
 import { CopyIconButton } from "./CopyIconButton";
 import { Banner } from "./core/Banner";
 import type { ButtonProps } from "./core/Button";
@@ -128,12 +129,12 @@ export function WorkspaceEncryptionSetting({ size, expanded, onDone, onEnabledEn
             setJustEnabledEncryption(true);
           } catch (err) {
             setError(
-              `Failed to enable encryption: ${err instanceof Error ? err.message : String(err)}`,
+              `${t("Failed to enable encryption")}: ${err instanceof Error ? err.message : String(err)}`,
             );
           }
         }}
       >
-        Enable Encryption
+        {t("Enable Encryption")}
       </Button>
       {error && (
         <Banner color="danger" className="mb-2">
@@ -146,7 +147,7 @@ export function WorkspaceEncryptionSetting({ size, expanded, onDone, onEnabledEn
         </Banner>
       ) : (
         <Label htmlFor={null} help={<EncryptionHelp />}>
-          Workspace encryption
+          {t("Workspace encryption")}
         </Label>
       )}
     </div>
@@ -174,16 +175,17 @@ function EnterWorkspaceKey({
   const handleForgotKey = async () => {
     const confirmed = await showConfirm({
       id: "disable-encryption",
-      title: "Disable Encryption",
+      title: t("Disable Encryption"),
       color: "danger",
-      confirmText: "Disable Encryption",
+      confirmText: t("Disable Encryption"),
       description: (
         <>
-          This will disable encryption for this workspace. Any previously encrypted values will fail
-          to decrypt and will need to be re-entered manually.
+          {t(
+            "This will disable encryption for this workspace. Any previously encrypted values will fail to decrypt and will need to be re-entered manually.",
+          )}
           <br />
           <br />
-          This action cannot be undone.
+          {t("This action cannot be undone.")}
         </>
       ),
     });
@@ -200,8 +202,9 @@ function EnterWorkspaceKey({
         <Banner color="danger">{error}</Banner>
       ) : (
         <Banner color="info">
-          This workspace contains encrypted values but no key is configured. Please enter the
-          workspace key to access the encrypted data.
+          {t(
+            "This workspace contains encrypted values but no key is configured. Please enter the workspace key to access the encrypted data.",
+          )}
         </Banner>
       )}
       <HStack
@@ -223,11 +226,11 @@ function EnterWorkspaceKey({
         <PlainInput
           required
           onChange={setKey}
-          label="Workspace encryption key"
+          label={t("Workspace encryption key")}
           placeholder="YK0000-111111-222222-333333-444444-AAAAAA-BBBBBB-CCCCCC-DDDDDD"
         />
         <Button variant="border" type="submit" color="secondary">
-          Submit
+          {t("Submit")}
         </Button>
       </HStack>
       <button
@@ -235,7 +238,7 @@ function EnterWorkspaceKey({
         onClick={handleForgotKey}
         className="text-text-subtlest text-sm hover:text-text-subtle"
       >
-        Forgot your key?
+        {t("Forgot your key?")}
       </button>
     </VStack>
   );
@@ -262,16 +265,16 @@ function KeyRevealer({
       <VStack space={0.5}>
         {!disableLabel && (
           <span className="text-sm text-primary flex items-center gap-1">
-            Workspace encryption key{" "}
+            {t("Workspace encryption key")}{" "}
             <IconTooltip iconSize="sm" size="lg" content={helpAfterEncryption} />
           </span>
         )}
         {encryptionKey && <HighlightedKey keyText={encryptionKey} show={show} />}
       </VStack>
       <HStack>
-        {encryptionKey && <CopyIconButton text={encryptionKey} title="Copy workspace key" />}
+        {encryptionKey && <CopyIconButton text={encryptionKey} title={t("Copy workspace key")} />}
         <IconButton
-          title={show ? "Hide" : "Reveal" + "workspace key"}
+          title={show ? t("Hide workspace key") : t("Reveal workspace key")}
           icon={show ? "eye_closed" : "eye"}
           onClick={() => setShow((v) => !v)}
         />
@@ -307,8 +310,8 @@ function HighlightedKey({ keyText, show }: { keyText: string; show: boolean }) {
 
 const helpAfterEncryption = (
   <p>
-    The following key is used for encryption operations within this workspace. It is stored securely
-    using your OS keychain, but it is recommended to back it up. If you share this workspace with
-    others, you&apos;ll need to send them this key to access any encrypted values.
+    {t(
+      "The following key is used for encryption operations within this workspace. It is stored securely using your OS keychain, but it is recommended to back it up. If you share this workspace with others, you'll need to send them this key to access any encrypted values.",
+    )}
   </p>
 );

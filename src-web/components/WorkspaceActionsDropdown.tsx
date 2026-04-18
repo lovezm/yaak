@@ -16,6 +16,7 @@ import { useCreateWorkspace } from "../hooks/useCreateWorkspace";
 import { useDeleteSendHistory } from "../hooks/useDeleteSendHistory";
 import { useWorkspaceActions } from "../hooks/useWorkspaceActions";
 import { showDialog } from "../lib/dialog";
+import { t } from "../lib/i18n";
 import { jotaiStore } from "../lib/jotai";
 import { revealInFinderText } from "../lib/reveal";
 import { CloneGitRepositoryDialog } from "./CloneGitRepositoryDialog";
@@ -44,7 +45,7 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
     showDialog({
       id: "clone-git-repository",
       size: "md",
-      title: "Clone Git Repository",
+      title: t("Clone Git Repository"),
       render: ({ hide }) => <CloneGitRepositoryDialog hide={hide} />,
     });
   }, []);
@@ -63,20 +64,20 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
 
     const itemsBefore: DropdownItem[] = [
       {
-        label: "New Workspace",
+        label: t("New Workspace"),
         leftSlot: <Icon icon="plus" />,
         submenu: [
           {
-            label: "Create Empty",
+            label: t("Create Empty"),
             leftSlot: <Icon icon="plus_circle" />,
             onSelect: createWorkspace,
           },
           {
-            label: "Open Folder",
+            label: t("Open Folder"),
             leftSlot: <Icon icon="folder_open" />,
             onSelect: async () => {
               const dir = await open({
-                title: "Select Workspace Directory",
+                title: t("Select Workspace Directory"),
                 directory: true,
                 multiple: false,
               });
@@ -86,7 +87,7 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
             },
           },
           {
-            label: "Clone Git Repository",
+            label: t("Clone Git Repository"),
             leftSlot: <Icon icon="hard_drive_download" />,
             onSelect: openCloneGitRepositoryDialog,
           },
@@ -103,7 +104,7 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
       })),
       ...(workspaceActions.length > 0 ? [{ type: "separator" as const }] : []),
       {
-        label: "Workspace Settings",
+        label: t("Workspace Settings"),
         leftSlot: <Icon icon="settings" />,
         hotKeyAction: "workspace_settings.show",
         onSelect: openWorkspaceSettings,
@@ -118,7 +119,7 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
         },
       },
       {
-        label: "Clear Send History",
+        label: t("Clear Send History"),
         color: "warning",
         leftSlot: <Icon icon="history" />,
         onSelect: deleteSendHistory,
@@ -159,7 +160,7 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
     showDialog({
       id: "switch-workspace",
       size: "sm",
-      title: "Switch Workspace",
+      title: t("Switch Workspace"),
       render: ({ hide }) => <SwitchWorkspaceDialog workspace={workspace} hide={hide} />,
     });
   }, []);
@@ -181,7 +182,7 @@ export const WorkspaceActionsDropdown = memo(function WorkspaceActionsDropdown({
         )}
         {...buttonProps}
       >
-        {workspace?.name ?? "Workspace"}
+        {workspace?.name ?? t("Workspace")}
       </Button>
     </RadioDropdown>
   );
