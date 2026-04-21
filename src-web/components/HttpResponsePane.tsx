@@ -164,7 +164,9 @@ export function HttpResponsePane({ style, className, activeRequestId, activeRequ
           },
           items: [
             { label: t("cURL"), shortLabel: t("Code"), value: "curl" },
-            { label: t("Python httpx"), shortLabel: t("Code"), value: "python" },
+            { label: t("Python"), shortLabel: t("Code"), value: "python" },
+            { label: t("Java"), shortLabel: t("Code"), value: "java" },
+            { label: t("Rust"), shortLabel: t("Code"), value: "rust" },
             { label: t("E Language"), shortLabel: t("Code"), value: "e" },
           ],
         },

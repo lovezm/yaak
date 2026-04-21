@@ -1,6 +1,8 @@
 import classNames from "classnames";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { copyToClipboard } from "../../lib/copy";
+import { Button } from "./Button";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -10,6 +12,7 @@ interface Props {
   attrKey?: string | number;
   attrKeyJsonPath?: string;
   className?: string;
+  enableCopyActions?: boolean;
 }
 
 export const JsonAttributeTree = ({
@@ -18,8 +21,9 @@ export const JsonAttributeTree = ({
   attrValue,
   attrKeyJsonPath,
   className,
+  enableCopyActions = false,
 }: Props) => {
-  attrKeyJsonPath = attrKeyJsonPath ?? `${attrKey}`;
+  attrKeyJsonPath = attrKeyJsonPath ?? "$";
 
   const [isExpanded, setIsExpanded] = useState(true);
   const toggleExpanded = () => setIsExpanded((v) => !v);
@@ -43,6 +47,7 @@ export const JsonAttributeTree = ({
                   attrValue={attrValue[k]}
                   attrKey={k}
                   attrKeyJsonPath={joinObjectKey(attrKeyJsonPath, k)}
+                  enableCopyActions={enableCopyActions}
                 />
               ))
           : null,
@@ -63,6 +68,7 @@ export const JsonAttributeTree = ({
                 attrValue={v}
                 attrKey={i}
                 attrKeyJsonPath={joinArrayKey(attrKeyJsonPath, i)}
+                enableCopyActions={enableCopyActions}
               />
             ))
           : null,
@@ -91,6 +97,10 @@ export const JsonAttributeTree = ({
       {label}
     </span>
   );
+
+  const copyValue = () => copyToClipboard(formatNodeValue(attrValue));
+  const copyPath = () => copyToClipboard(normalizeJsonPathForCopy(attrKeyJsonPath));
+
   return (
     <div
       className={classNames(
@@ -99,11 +109,11 @@ export const JsonAttributeTree = ({
         depth === 0 && "h-full overflow-y-auto pb-2",
       )}
     >
-      <div className="flex items-center">
+      <div className="group flex items-center gap-2">
         {isExpandable ? (
           <button
             type="button"
-            className="group relative flex items-center pl-4 w-full"
+            className="group/toggle relative flex items-center pl-4 min-w-0 flex-1 text-left"
             onClick={toggleExpanded}
           >
             <Icon
@@ -111,22 +121,48 @@ export const JsonAttributeTree = ({
               icon="chevron_right"
               className={classNames(
                 "left-0 absolute transition-transform flex items-center",
-                "group-hover:text-text-subtle",
+                "group-hover/toggle:text-text-subtle",
                 isExpanded ? "rotate-90" : "",
               )}
             />
-            <span className="text-primary group-hover:text-primary mr-1.5 whitespace-nowrap">
+            <span className="text-primary group-hover/toggle:text-primary mr-1.5 whitespace-nowrap">
               {attrKey === undefined ? "$" : attrKey}:
             </span>
             {labelEl}
           </button>
         ) : (
-          <>
+          <div className="flex items-center min-w-0 flex-1">
             <span className="text-primary mr-1.5 pl-4 whitespace-nowrap cursor-text select-text">
-              {attrKey}:
+              {attrKey === undefined ? "$" : attrKey}:
             </span>
             {labelEl}
-          </>
+          </div>
+        )}
+        {enableCopyActions && (
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <Button
+              size="2xs"
+              variant="border"
+              title="复制值"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyValue();
+              }}
+            >
+              值
+            </Button>
+            <Button
+              size="2xs"
+              variant="border"
+              title="复制路径"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyPath();
+              }}
+            >
+              路径
+            </Button>
+          </div>
         )}
       </div>
       {children && <div className="ml-4 whitespace-nowrap">{children}</div>}
@@ -143,4 +179,44 @@ function joinObjectKey(baseKey: string | undefined, key: string): string {
 
 function joinArrayKey(baseKey: string | undefined, index: number): string {
   return `${baseKey ?? ""}[${index}]`;
+}
+
+function formatNodeValue(
+  // oxlint-disable-next-line no-explicit-any
+  value: any,
+) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (
+    value == null ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function normalizeJsonPathForCopy(path: string) {
+  if (path === "$") {
+    return "";
+  }
+
+  if (path.startsWith("$.")) {
+    return path.slice(2);
+  }
+
+  if (path.startsWith("$[")) {
+    return path.slice(1);
+  }
+
+  return path;
 }

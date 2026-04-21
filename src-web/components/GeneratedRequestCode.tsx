@@ -1,7 +1,16 @@
 import type { HttpRequest, HttpRequestHeader } from "@yaakapp-internal/models";
-import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { CSSProperties, ReactNode } from "react";
+import { Fragment, useMemo } from "react";
+import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
+import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
+import java from "react-syntax-highlighter/dist/esm/languages/prism/java";
+import python from "react-syntax-highlighter/dist/esm/languages/prism/python";
+import rust from "react-syntax-highlighter/dist/esm/languages/prism/rust";
+import { useActiveEnvironment } from "../hooks/useActiveEnvironment";
 import { useInheritedHeaders } from "../hooks/useInheritedHeaders";
 import { useKeyValue } from "../hooks/useKeyValue";
+import { renderTemplate } from "../hooks/useRenderTemplate";
 import { getMimeTypeFromContentType, isProbablyTextContentType } from "../lib/contentType";
 import { t } from "../lib/i18n";
 import {
@@ -12,12 +21,16 @@ import {
   getContentTypeFromHeaders,
 } from "../lib/model_util";
 import { Banner } from "./core/Banner";
-import { Editor } from "./core/Editor/LazyEditor";
 import { SegmentedControl } from "./core/SegmentedControl";
 import { HStack, VStack } from "./core/Stacks";
 import { CopyIconButton } from "./CopyIconButton";
 
-export type GeneratedRequestCodeMode = "curl" | "python" | "e";
+SyntaxHighlighter.registerLanguage("bash", bash);
+SyntaxHighlighter.registerLanguage("python", python);
+SyntaxHighlighter.registerLanguage("java", java);
+SyntaxHighlighter.registerLanguage("rust", rust);
+
+export type GeneratedRequestCodeMode = "curl" | "python" | "java" | "rust" | "e";
 
 interface Props {
   request: HttpRequest | null;
@@ -28,6 +41,7 @@ const MAX_INLINE_BODY_BYTES = 64 * 1024;
 
 export function GeneratedRequestCode({ request }: Props) {
   const inheritedHeaders = useInheritedHeaders(request);
+  const activeEnvironment = useActiveEnvironment();
   const { value: mode, set: setMode } = useKeyValue<GeneratedRequestCodeMode>({
     namespace: "no_sync",
     key: "response_generated_code_mode",
@@ -36,9 +50,34 @@ export function GeneratedRequestCode({ request }: Props) {
 
   const activeMode = mode ?? DEFAULT_MODE;
 
-  const requestSnapshot = useMemo(() => {
+  const rawRequestSnapshot = useMemo(() => {
     return buildRequestSnapshot(request, inheritedHeaders);
   }, [inheritedHeaders, request]);
+
+  const renderedSnapshot = useQuery({
+    enabled: request != null,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
+    queryKey: [
+      "generated_request_rendered_snapshot",
+      request?.id ?? null,
+      request?.updatedAt ?? null,
+      request?.workspaceId ?? null,
+      activeEnvironment?.id ?? null,
+      rawRequestSnapshot.method,
+      rawRequestSnapshot.url,
+      rawRequestSnapshot.bodyText,
+      rawRequestSnapshot.headers.map((header) => `${header.name}\u0000${header.value}`).join("\u0001"),
+    ],
+    queryFn: async () =>
+      renderRequestSnapshotTemplates({
+        snapshot: rawRequestSnapshot,
+        workspaceId: request?.workspaceId ?? "n/a",
+        environmentId: activeEnvironment?.id ?? null,
+      }),
+  });
+
+  const requestSnapshot = renderedSnapshot.data ?? rawRequestSnapshot;
 
   const generated = useMemo(() => {
     const contentType = getContentTypeFromHeaders(requestSnapshot.headers);
@@ -74,7 +113,9 @@ export function GeneratedRequestCode({ request }: Props) {
           }}
           options={[
             { value: "curl", label: t("cURL") },
-            { value: "python", label: t("Python httpx") },
+            { value: "python", label: t("Python") },
+            { value: "java", label: t("Java") },
+            { value: "rust", label: t("Rust") },
             { value: "e", label: t("E Language") },
           ]}
         />
@@ -89,19 +130,70 @@ export function GeneratedRequestCode({ request }: Props) {
 
       {generated.warning != null && <Banner color="warning">{generated.warning}</Banner>}
 
-      <div className="min-h-0 flex-1">
-        <Editor
-          hideGutter
-          readOnly
-          wrapLines
-          defaultValue={generated.code}
-          forceUpdateKey={generated.code}
-          language={activeMode === "curl" ? "shell" : activeMode === "python" ? "python" : "text"}
-          stateKey={`generated_request_code.${request?.id ?? "none"}.${activeMode}`}
-        />
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border-subtle bg-surface-highlight/30">
+        {activeMode === "e" ? (
+          <ELanguageCodeBlock code={generated.code} />
+        ) : (
+          <SyntaxHighlighter
+            language={getGeneratedCodeLanguage(activeMode)}
+            style={generatedCodeTheme}
+            showLineNumbers
+            customStyle={generatedCodeBlockStyle}
+            codeTagProps={{ style: generatedCodeTagStyle }}
+            lineNumberStyle={generatedCodeLineNumberStyle}
+            wrapLongLines
+          >
+            {generated.code}
+          </SyntaxHighlighter>
+        )}
       </div>
     </VStack>
   );
+}
+
+async function renderRequestSnapshotTemplates({
+  snapshot,
+  workspaceId,
+  environmentId,
+}: {
+  snapshot: ReturnType<typeof buildRequestSnapshot>;
+  workspaceId: string;
+  environmentId: string | null;
+}) {
+  const render = async (value: string | null) => {
+    if (value == null || !containsTemplateSyntax(value)) {
+      return value;
+    }
+
+    try {
+      return await renderTemplate({
+        template: value,
+        workspaceId,
+        environmentId,
+        purpose: "send",
+      });
+    } catch {
+      return value;
+    }
+  };
+
+  const [url, bodyText, headers] = await Promise.all([
+    render(snapshot.url),
+    render(snapshot.bodyText),
+    Promise.all(
+      snapshot.headers.map(async (header) => ({
+        name: (await render(header.name)) ?? header.name,
+        value: (await render(header.value)) ?? header.value,
+      })),
+    ),
+  ]);
+
+  return {
+    ...snapshot,
+    url: url ?? snapshot.url,
+    bodyText: bodyText ?? snapshot.bodyText,
+    headers,
+  };
 }
 
 function buildRequestSnapshot(request: HttpRequest | null, inheritedHeaders: HttpRequestHeader[]) {
@@ -332,6 +424,20 @@ function buildGeneratedSnippet({
     };
   }
 
+  if (mode === "java") {
+    return {
+      code: buildJavaCode({ method, url, headers, bodyText, omittedReason }),
+      warning: omittedReason,
+    };
+  }
+
+  if (mode === "rust") {
+    return {
+      code: buildRustCode({ method, url, headers, bodyText, omittedReason }),
+      warning: omittedReason,
+    };
+  }
+
   return {
     code: buildCurlCode({ method, url, headers, bodyText, omittedReason }),
     warning: omittedReason,
@@ -507,12 +613,308 @@ function buildELanguageCode({
   return lines.join("\n");
 }
 
+function buildJavaCode({
+  method,
+  url,
+  headers,
+  bodyText,
+  omittedReason,
+}: {
+  method: string;
+  url: string;
+  headers: Array<{ name: string; value: string }>;
+  bodyText: string | null;
+  omittedReason: string | null;
+}) {
+  const lines = [
+    "import java.io.IOException;",
+    "import java.net.URI;",
+    "import java.net.http.HttpClient;",
+    "import java.net.http.HttpRequest;",
+    "import java.net.http.HttpResponse;",
+    "",
+    "public class Main {",
+    "    public static void main(String[] args) throws IOException, InterruptedException {",
+    "        HttpClient client = HttpClient.newHttpClient();",
+    "",
+    "        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()",
+    `            .uri(URI.create(${javaString(url)}))`,
+  ];
+
+  headers.forEach((header) => {
+    lines.push(`            .header(${javaString(header.name)}, ${javaString(header.value)})`);
+  });
+
+  const bodyPublisher =
+    bodyText != null
+      ? `HttpRequest.BodyPublishers.ofString(${javaString(bodyText)})`
+      : "HttpRequest.BodyPublishers.noBody()";
+
+  lines.push(`            .method(${javaString(method.toUpperCase())}, ${bodyPublisher});`);
+  if (omittedReason != null) {
+    lines.push("");
+    lines.push(`        // ${omittedReason}`);
+  }
+  lines.push("");
+  lines.push("        HttpResponse<String> response = client.send(");
+  lines.push("            requestBuilder.build(),");
+  lines.push("            HttpResponse.BodyHandlers.ofString()");
+  lines.push("        );");
+  lines.push("");
+  lines.push("        System.out.println(response.statusCode());");
+  lines.push("        System.out.println(response.body());");
+  lines.push("    }");
+  lines.push("}");
+
+  return lines.join("\n");
+}
+
+function buildRustCode({
+  method,
+  url,
+  headers,
+  bodyText,
+  omittedReason,
+}: {
+  method: string;
+  url: string;
+  headers: Array<{ name: string; value: string }>;
+  bodyText: string | null;
+  omittedReason: string | null;
+}) {
+  const lines = [
+    '// Cargo.toml: reqwest = { version = "0.12", features = ["blocking"] }',
+    "use reqwest::blocking::Client;",
+    "use reqwest::Method;",
+    "use std::error::Error;",
+    "",
+    "fn main() -> Result<(), Box<dyn Error>> {",
+    "    let client = Client::new();",
+    `    let mut request = client.request(Method::from_bytes(${rustString(method.toUpperCase())}.as_bytes())?, ${rustString(url)});`,
+  ];
+
+  headers.forEach((header) => {
+    lines.push(`    request = request.header(${rustString(header.name)}, ${rustString(header.value)});`);
+  });
+
+  if (bodyText != null) {
+    lines.push(`    request = request.body(${rustString(bodyText)});`);
+  } else if (omittedReason != null) {
+    lines.push(`    // ${omittedReason}`);
+  }
+
+  lines.push("");
+  lines.push("    let response = request.send()?;");
+  lines.push("    println!(\"{}\", response.status());");
+  lines.push("    println!(\"{}\", response.text()?);");
+  lines.push("    Ok(())");
+  lines.push("}");
+
+  return lines.join("\n");
+}
+
+function getGeneratedCodeLanguage(mode: GeneratedRequestCodeMode) {
+  if (mode === "curl") return "bash";
+  if (mode === "python") return "python";
+  if (mode === "java") return "java";
+  if (mode === "rust") return "rust";
+  return "bash";
+}
+
 function shellQuote(value: string) {
   return `'${value.replaceAll("'", `'\"'\"'`)}'`;
 }
 
+function containsTemplateSyntax(value: string) {
+  return value.includes("${[");
+}
+
 function pythonString(value: string) {
   return JSON.stringify(value);
+}
+
+function javaString(value: string) {
+  return JSON.stringify(value);
+}
+
+function rustString(value: string) {
+  return JSON.stringify(value);
+}
+
+const generatedCodeTheme = {
+  'pre[class*="language-"]': {
+    background: "transparent",
+  },
+  'code[class*="language-"]': {
+    background: "transparent",
+  },
+  comment: { color: "var(--textSubtle)" },
+  prolog: { color: "var(--textSubtle)" },
+  doctype: { color: "var(--textSubtle)" },
+  cdata: { color: "var(--textSubtle)" },
+  punctuation: { color: "var(--textSubtle)" },
+  property: { color: "var(--primary)" },
+  "attr-name": { color: "var(--primary)" },
+  string: { color: "var(--notice)" },
+  char: { color: "var(--notice)" },
+  number: { color: "var(--info)" },
+  constant: { color: "var(--info)" },
+  symbol: { color: "var(--info)" },
+  boolean: { color: "var(--warning)" },
+  "attr-value": { color: "var(--warning)" },
+  variable: { color: "var(--success)" },
+  tag: { color: "var(--info)" },
+  operator: { color: "var(--danger)" },
+  keyword: { color: "var(--danger)" },
+  function: { color: "var(--success)" },
+  "class-name": { color: "var(--primary)" },
+  builtin: { color: "var(--danger)" },
+  selector: { color: "var(--danger)" },
+  inserted: { color: "var(--success)" },
+  deleted: { color: "var(--danger)" },
+  regex: { color: "var(--warning)" },
+  important: { color: "var(--danger)", fontWeight: "bold" },
+  italic: { fontStyle: "italic" },
+  bold: { fontWeight: "bold" },
+  entity: { cursor: "help" },
+};
+
+const generatedCodeBlockStyle: CSSProperties = {
+  margin: 0,
+  padding: "0.75rem 0",
+  background: "transparent",
+  minHeight: "100%",
+  fontSize: "0.875rem",
+};
+
+const generatedCodeTagStyle: CSSProperties = {
+  fontFamily: "var(--font-mono)",
+};
+
+const generatedCodeLineNumberStyle: CSSProperties = {
+  minWidth: "2.5rem",
+  paddingRight: "1rem",
+  opacity: 0.45,
+};
+
+function ELanguageCodeBlock({ code }: { code: string }) {
+  const lines = code.split("\n");
+
+  return (
+    <pre className="m-0 min-h-full bg-transparent py-3 text-sm">
+      {lines.map((line, index) => (
+        <div key={`${index}-${line}`} className="flex">
+          <span className="select-none pr-4 text-right opacity-45" style={generatedCodeLineNumberStyle}>
+            {index + 1}
+          </span>
+          <code style={generatedCodeTagStyle} className="flex-1 whitespace-pre-wrap break-words">
+            {renderELanguageLine(line)}
+          </code>
+        </div>
+      ))}
+    </pre>
+  );
+}
+
+function renderELanguageLine(line: string): ReactNode {
+  const { codePart, commentPart } = splitELanguageComment(line);
+  const nodes: ReactNode[] = [];
+  const tokenRegex =
+    /"(?:[^"]|"")*"|(^|\s)(\.[\u4e00-\u9fa5A-Za-z_][\u4e00-\u9fa5A-Za-z0-9_]*)|(^|\s)([\u4e00-\u9fa5A-Za-z_][\u4e00-\u9fa5A-Za-z0-9_]*)(\s*=)|([\u4e00-\u9fa5A-Za-z_][\u4e00-\u9fa5A-Za-z0-9_]*)(?=\s*\()/gmu;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = tokenRegex.exec(codePart)) !== null) {
+    const matchText = match[0];
+    const matchIndex = match.index;
+
+    if (matchIndex > lastIndex) {
+      nodes.push(
+        <Fragment key={`plain-${lastIndex}`}>{codePart.slice(lastIndex, matchIndex)}</Fragment>,
+      );
+    }
+
+    if (matchText.startsWith('"')) {
+      nodes.push(
+        <span key={`string-${matchIndex}`} className="text-notice">
+          {matchText}
+        </span>,
+      );
+    } else if (match[2]) {
+      const leading = match[1] ?? "";
+      nodes.push(<Fragment key={`kw-leading-${matchIndex}`}>{leading}</Fragment>);
+      nodes.push(
+        <span key={`kw-${matchIndex}`} className="text-danger">
+          {match[2]}
+        </span>,
+      );
+    } else if (match[4]) {
+      const leading = match[3] ?? "";
+      const variableName = match[4];
+      const suffix = match[5] ?? "";
+      nodes.push(<Fragment key={`var-leading-${matchIndex}`}>{leading}</Fragment>);
+      nodes.push(
+        <span key={`var-${matchIndex}`} className="text-info">
+          {variableName}
+        </span>,
+      );
+      nodes.push(<Fragment key={`var-suffix-${matchIndex}`}>{suffix}</Fragment>);
+    } else if (match[6]) {
+      nodes.push(
+        <span key={`fn-${matchIndex}`} className="text-primary">
+          {match[6]}
+        </span>,
+      );
+    } else {
+      nodes.push(<Fragment key={`raw-${matchIndex}`}>{matchText}</Fragment>);
+    }
+
+    lastIndex = matchIndex + matchText.length;
+  }
+
+  if (lastIndex < codePart.length) {
+    nodes.push(<Fragment key={`tail-${lastIndex}`}>{codePart.slice(lastIndex)}</Fragment>);
+  }
+
+  if (commentPart != null) {
+    nodes.push(
+      <span key="comment" className="text-text-subtle">
+        {commentPart}
+      </span>,
+    );
+  }
+
+  return nodes;
+}
+
+function splitELanguageComment(line: string) {
+  let inString = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const current = line[i];
+    const next = line[i + 1];
+
+    if (current === '"') {
+      if (inString && next === '"') {
+        i += 1;
+        continue;
+      }
+      inString = !inString;
+      continue;
+    }
+
+    if (!inString && current === "'") {
+      return {
+        codePart: line.slice(0, i),
+        commentPart: line.slice(i),
+      };
+    }
+  }
+
+  return {
+    codePart: line,
+    commentPart: null as string | null,
+  };
 }
 
 function isFormUrlencodedBody(
