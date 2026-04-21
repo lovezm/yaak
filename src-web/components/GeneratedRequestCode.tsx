@@ -130,7 +130,7 @@ export function GeneratedRequestCode({ request }: Props) {
 
       {generated.warning != null && <Banner color="warning">{generated.warning}</Banner>}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border-subtle bg-surface-highlight/30">
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border-subtle bg-surface-highlight/30 select-text cursor-text [&_*]:select-text [&_*]:cursor-text">
         {activeMode === "e" ? (
           <ELanguageCodeBlock code={generated.code} />
         ) : (
@@ -785,29 +785,35 @@ const generatedCodeBlockStyle: CSSProperties = {
   background: "transparent",
   minHeight: "100%",
   fontSize: "0.875rem",
+  userSelect: "text",
+  cursor: "text",
 };
 
 const generatedCodeTagStyle: CSSProperties = {
   fontFamily: "var(--font-mono)",
+  userSelect: "text",
+  cursor: "text",
 };
 
 const generatedCodeLineNumberStyle: CSSProperties = {
   minWidth: "2.5rem",
   paddingRight: "1rem",
   opacity: 0.45,
+  userSelect: "none",
+  cursor: "default",
 };
 
 function ELanguageCodeBlock({ code }: { code: string }) {
   const lines = code.split("\n");
 
   return (
-    <pre className="m-0 min-h-full bg-transparent py-3 text-sm">
+    <pre className="m-0 min-h-full bg-transparent py-3 text-sm select-text cursor-text [&_*]:select-text [&_*]:cursor-text">
       {lines.map((line, index) => (
         <div key={`${index}-${line}`} className="flex">
-          <span className="select-none pr-4 text-right opacity-45" style={generatedCodeLineNumberStyle}>
+          <span className="!select-none !cursor-default pr-4 text-right opacity-45" style={generatedCodeLineNumberStyle}>
             {index + 1}
           </span>
-          <code style={generatedCodeTagStyle} className="flex-1 whitespace-pre-wrap break-words">
+          <code style={generatedCodeTagStyle} className="flex-1 whitespace-pre-wrap break-words select-text cursor-text [&_*]:select-text [&_*]:cursor-text">
             {renderELanguageLine(line)}
           </code>
         </div>

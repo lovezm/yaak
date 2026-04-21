@@ -5,12 +5,15 @@ import { getResponseBodyBytes, getResponseBodyText } from "../lib/responseBody";
 export function useResponseBodyText({
   response,
   filter,
+  enabled = true,
 }: {
   response: HttpResponse;
   filter: string | null;
+  enabled?: boolean;
 }) {
   return useQuery({
     placeholderData: (prev) => prev, // Keep previous data on refetch
+    enabled,
     queryKey: [
       "response_body_text",
       response.id,
