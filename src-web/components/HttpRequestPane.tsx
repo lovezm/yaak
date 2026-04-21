@@ -55,6 +55,7 @@ import { HttpAuthenticationEditor } from "./HttpAuthenticationEditor";
 import { JsonBodyEditor } from "./JsonBodyEditor";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { RequestMethodDropdown } from "./RequestMethodDropdown";
+import { RequestCryptoPanel } from "./RequestCryptoPanel";
 import { UrlBar } from "./UrlBar";
 import { UrlParametersEditor } from "./UrlParameterEditor";
 
@@ -76,6 +77,7 @@ const TAB_AUTH = "auth";
 const TAB_DESCRIPTION = "description";
 const TAB_PROXY = "proxy";
 const TAB_REDIRECT = "redirect";
+const TAB_CRYPTO = "crypto";
 const TABS_STORAGE_KEY = "http_request_tabs";
 
 const BODY_TYPE_TABS = [
@@ -252,6 +254,10 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
         value: TAB_REDIRECT,
         label: t("Redirect"),
       },
+      {
+        value: TAB_CRYPTO,
+        label: t("Crypto"),
+      },
     ],
     [
       authTab,
@@ -400,9 +406,6 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
             <TabContent value={TAB_BODY}>
               <div className="grid grid-rows-[auto_minmax(0,1fr)] h-full gap-3">
                 <div className="rounded-md border border-border-subtle bg-surface p-2">
-                  <div className="text-xs uppercase tracking-wide text-text-subtle mb-2">
-                    {t("Body")}
-                  </div>
                   <div className="flex flex-wrap gap-2">
                     {BODY_TYPE_TABS.map((option) => {
                       const isActive = activeRequest.bodyType === option.value;
@@ -547,6 +550,9 @@ export function HttpRequestPane({ style, fullHeight, className, activeRequest }:
                   />
                 </div>
               </div>
+            </TabContent>
+            <TabContent value={TAB_CRYPTO}>
+              <RequestCryptoPanel />
             </TabContent>
           </Tabs>
         </>
